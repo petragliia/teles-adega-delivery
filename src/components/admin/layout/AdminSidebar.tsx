@@ -75,7 +75,9 @@ export function AdminSidebar({ isOpen = false, onClose }: AdminSidebarProps) {
           {MENU_ITEMS.map((item) => {
             const isActive =
               pathname === item.href ||
-              (item.href !== '/admin/dashboard' && pathname.startsWith(item.href));
+              (item.href !== '/admin/dashboard' &&
+               item.href !== '/admin/entregas' &&
+               pathname.startsWith(item.href + '/'));
             const Icon = item.icon;
 
             return (
