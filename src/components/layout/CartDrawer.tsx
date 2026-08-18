@@ -47,19 +47,19 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
         aria-hidden="true"
       />
 
-      <div className="fixed inset-y-0 right-0 flex max-w-full pl-10">
+      <div className="fixed inset-y-0 right-0 flex max-w-full pl-0 sm:pl-10 w-full sm:w-auto">
         {/* Container do Drawer (Slide-over) */}
-        <div className="relative w-screen max-w-md border-l border-[#262626] bg-[#161616] shadow-2xl flex flex-col justify-between">
+        <div className="relative w-full max-w-md border-l border-[#262626] bg-[#161616] shadow-2xl flex flex-col justify-between h-full overflow-hidden">
           
           {/* Header do Drawer */}
           <div className="flex items-center justify-between border-b border-[#262626] p-4 sm:px-6">
-            <div className="flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#F59E0B]/10 text-[#F59E0B]">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#F59E0B]/10 text-[#F59E0B]">
                 <ShoppingBag className="h-5 w-5" />
               </div>
-              <div>
-                <h2 className="text-base font-extrabold text-white">Sua Sacola</h2>
-                <p className="text-xs text-zinc-400">
+              <div className="min-w-0">
+                <h2 className="text-base font-extrabold text-white truncate">Sua Sacola</h2>
+                <p className="text-xs text-zinc-400 truncate">
                   {totalItens === 1 ? '1 item adicionado' : `${totalItens} itens adicionados`}
                 </p>
               </div>
@@ -121,7 +121,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                   </div>
 
                   {/* Controles de Quantidade & Lixeira */}
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 shrink-0">
                     <div className="flex items-center gap-1 rounded-lg border border-[#262626] bg-[#161616] p-1">
                       <button
                         onClick={() => updateQuantity(item.produto.id, item.quantidade - 1)}
