@@ -185,6 +185,16 @@ export default function AdminEntregasPage() {
                 </select>
               </div>
 
+              {/* Botão de Acesso Direto à Rota do Motoboy */}
+              <Link
+                href={`/motoboy/entrega/${pedido.id}`}
+                target="_blank"
+                className="w-full py-2.5 bg-[#8B5CF6]/15 hover:bg-[#8B5CF6]/25 border border-[#8B5CF6]/30 text-[#8B5CF6] rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition"
+              >
+                <Bike className="w-4 h-4" />
+                Abrir Rota do Entregador (GPS)
+              </Link>
+
               {/* OTP Validation Input if Order is in Route */}
               {pedido.status === 'em_rota' && (
                 <CodeValidationInput

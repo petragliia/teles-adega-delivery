@@ -12,6 +12,7 @@ export const useCartStore = create<CartStoreState>()(
       addItem: (produto: Produto, quantidade = 1) => {
         const { itens } = get();
         const itemExistente = itens.find((i) => i.produto.id === produto.id);
+        const precoUnitarioVigente = Number(produto.preco_vigente ?? produto.preco);
 
         if (itemExistente) {
           const novaQtd = Math.min(
@@ -23,8 +24,11 @@ export const useCartStore = create<CartStoreState>()(
               i.produto.id === produto.id
                 ? {
                     ...i,
+                    produto,
+                    precoUnitario: precoUnitarioVigente,
+                    promocao_id: produto.promocao_id || null,
                     quantidade: novaQtd,
-                    subtotal: novaQtd * i.precoUnitario,
+                    subtotal: novaQtd * precoUnitarioVigente,
                   }
                 : i
             ),
@@ -39,8 +43,9 @@ export const useCartStore = create<CartStoreState>()(
               {
                 produto,
                 quantidade: qtdInicial,
-                precoUnitario: produto.preco,
-                subtotal: qtdInicial * produto.preco,
+                precoUnitario: precoUnitarioVigente,
+                subtotal: qtdInicial * precoUnitarioVigente,
+                promocao_id: produto.promocao_id || null,
               },
             ],
           });

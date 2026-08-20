@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Bike, Wallet, Package, Users, Wine, X } from 'lucide-react';
+import { LayoutDashboard, Bike, Wallet, Package, Users, Wine, X, Sparkles, BarChart3 } from 'lucide-react';
 
 const MENU_ITEMS = [
   {
@@ -27,9 +27,19 @@ const MENU_ITEMS = [
     icon: Package,
   },
   {
+    label: 'Promoções',
+    href: '/admin/promocoes',
+    icon: Sparkles,
+  },
+  {
     label: 'Clientes & Fiado',
     href: '/admin/clientes',
     icon: Users,
+  },
+  {
+    label: 'Relatórios',
+    href: '/admin/relatorios',
+    icon: BarChart3,
   },
 ];
 

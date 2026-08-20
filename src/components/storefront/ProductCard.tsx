@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Image from 'next/image';
-import { Plus, Minus, AlertTriangle, Wine } from 'lucide-react';
+import { Plus, Minus, AlertTriangle, Wine, Sparkles } from 'lucide-react';
 import { Produto } from '@/types/storefront';
 import { useCartStore } from '@/store/useCartStore';
 import { useHydrated } from '@/hooks/useHydrated';
@@ -25,6 +25,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({ produto }) => {
   const isEsgotado = !produto.ativo || produto.estoque_atual <= 0;
   const isEstoqueBaixo =
     !isEsgotado && produto.estoque_atual <= produto.estoque_minimo;
+
+  const precoVigente = produto.preco_vigente ?? produto.preco;
+  const precoOriginal = produto.preco_original ?? produto.preco;
+  const emPromocao = Boolean(produto.em_promocao && precoVigente < precoOriginal);
 
   const formatarPreco = (val: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -50,9 +54,28 @@ export const ProductCard: React.FC<ProductCardProps> = ({ produto }) => {
 
   return (
     <div className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-[#262626] bg-[#161616] p-4 transition-all duration-300 hover:border-[#F59E0B]/40 hover:shadow-xl hover:shadow-[#F59E0B]/5">
+      {/* Badges de Promoção (PROMO DO DIA + Desconto %) */}
+      {emPromocao && (
+        <div className="absolute top-2.5 left-2.5 z-10 flex flex-wrap items-center gap-1.5">
+          <span className="flex items-center gap-1 bg-gradient-to-r from-amber-500 to-amber-600 text-black text-[11px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full shadow-lg shadow-amber-500/20">
+            <Sparkles className="w-3 h-3 fill-black" />
+            PROMO DO DIA
+          </span>
+          {produto.percentual_desconto !== undefined && produto.percentual_desconto > 0 && (
+            <span className="bg-red-600 text-white text-[11px] font-black px-2 py-0.5 rounded-full shadow-md">
+              -{produto.percentual_desconto}%
+            </span>
+          )}
+        </div>
+      )}
+
       {/* Badge de Alerta de Estoque Baixo */}
       {isEstoqueBaixo && (
-        <div className="absolute top-3 left-3 z-10 flex items-center gap-1 rounded-md bg-amber-500/20 px-2 py-1 text-[11px] font-bold text-amber-400 border border-amber-500/30 backdrop-blur-md">
+        <div
+          className={`absolute z-10 flex items-center gap-1 rounded-md bg-amber-500/20 px-2 py-1 text-[11px] font-bold text-amber-400 border border-amber-500/30 backdrop-blur-md ${
+            emPromocao ? 'top-9 left-2.5' : 'top-3 left-3'
+          }`}
+        >
           <AlertTriangle className="h-3 w-3" />
           <span>Últimas unidades!</span>
         </div>
@@ -102,9 +125,16 @@ export const ProductCard: React.FC<ProductCardProps> = ({ produto }) => {
         <div className="mt-4 flex items-center justify-between pt-2 border-t border-[#262626]">
           <div className="flex flex-col">
             <span className="text-[10px] font-medium uppercase text-zinc-500">Valor</span>
-            <span className="text-base font-extrabold text-white sm:text-lg">
-              {formatarPreco(produto.preco)}
-            </span>
+            <div className="flex items-baseline gap-1.5 flex-wrap">
+              {emPromocao && (
+                <span className="text-xs text-zinc-500 line-through">
+                  {formatarPreco(precoOriginal)}
+                </span>
+              )}
+              <span className="text-base font-extrabold text-[#F59E0B] sm:text-lg">
+                {formatarPreco(precoVigente)}
+              </span>
+            </div>
           </div>
 
           {/* Seletor de Quantidade ou Botão Adicionar */}

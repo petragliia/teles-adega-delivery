@@ -19,6 +19,15 @@ export interface OrderRealtimeData {
   status: StatusPedido;
   codigo_entrega: string;
   chave_idempotencia: string;
+  motoboy_id?: string | null;
+  motoboy?: {
+    id: string;
+    nome: string;
+    telefone: string;
+    latitude?: number | null;
+    longitude?: number | null;
+    ultima_localizacao_em?: string | null;
+  } | null;
   criado_em: string;
   atualizado_em?: string;
 }

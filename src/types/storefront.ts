@@ -10,14 +10,24 @@ export interface Categoria {
 export interface Produto {
   id: string;
   categoria_id: string;
+  categoria_nome?: string;
   nome: string;
   descricao?: string;
   preco: number;
+  preco_original?: number;
+  preco_vigente?: number;
+  em_promocao?: boolean;
+  percentual_desconto?: number;
+  promocao_id?: string | null;
+  promocao_expira_em?: string | null;
   foto_url?: string;
   estoque_atual: number;
   estoque_minimo: number;
   ativo: boolean;
   destaque?: boolean;
+  criado_em?: string;
+  atualizado_em?: string;
+  ultimo_alerta_estoque_em?: string | null;
   categoria?: {
     nome: string;
   } | null;
@@ -28,6 +38,7 @@ export interface CartItem {
   quantidade: number;
   precoUnitario: number;
   subtotal: number;
+  promocao_id?: string | null;
 }
 
 export type FormaPagamento = 'pix' | 'dinheiro' | 'fiado';
@@ -48,6 +59,7 @@ export interface PedidoItem {
   quantidade: number;
   preco_unitario: number;
   subtotal: number;
+  promocao_id?: string | null;
 }
 
 export interface Pedido {
@@ -68,6 +80,15 @@ export interface Pedido {
   status: StatusPedido;
   codigo_entrega: string;
   chave_idempotencia: string;
+  motoboy_id?: string | null;
+  motoboy?: {
+    id: string;
+    nome: string;
+    telefone: string;
+    latitude?: number | null;
+    longitude?: number | null;
+    ultima_localizacao_em?: string | null;
+  } | null;
   criado_em: string;
   atualizado_em?: string;
   itens?: PedidoItem[];

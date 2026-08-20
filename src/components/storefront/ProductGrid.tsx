@@ -19,6 +19,10 @@ const PRODUTOS_MOCK: Produto[] = [
     nome: 'Heineken Long Neck 330ml (Gelada)',
     descricao: 'Cerveja Premium Lager puro malte refrescante trincando de gelada.',
     preco: 9.90,
+    preco_original: 9.90,
+    preco_vigente: 7.90,
+    em_promocao: true,
+    percentual_desconto: 20,
     foto_url: '/products/heineken-long-neck.png',
     estoque_atual: 48,
     estoque_minimo: 10,
@@ -31,6 +35,9 @@ const PRODUTOS_MOCK: Produto[] = [
     nome: 'Amstel Cerveja Lata 350ml',
     descricao: 'Cerveja Puro Malte receita holandesa tradicional.',
     preco: 4.50,
+    preco_original: 4.50,
+    preco_vigente: 4.50,
+    em_promocao: false,
     foto_url: '/products/amstel-lata.png',
     estoque_atual: 120,
     estoque_minimo: 20,
@@ -42,6 +49,9 @@ const PRODUTOS_MOCK: Produto[] = [
     nome: 'Whisky Red Label 1L',
     descricao: 'Whisky Escocês Johnnie Walker Red Label Garrafa 1 Litro.',
     preco: 99.90,
+    preco_original: 99.90,
+    preco_vigente: 99.90,
+    em_promocao: false,
     foto_url: '/products/red-label-whisky.png',
     estoque_atual: 5,
     estoque_minimo: 6,
@@ -54,6 +64,9 @@ const PRODUTOS_MOCK: Produto[] = [
     nome: 'Vodka Absolut Original 1L',
     descricao: 'Vodka Sueca pura e refinada 1 Litro.',
     preco: 84.90,
+    preco_original: 84.90,
+    preco_vigente: 84.90,
+    em_promocao: false,
     foto_url: '/products/absolut-vodka.png',
     estoque_atual: 12,
     estoque_minimo: 5,
@@ -65,6 +78,9 @@ const PRODUTOS_MOCK: Produto[] = [
     nome: 'Energético Red Bull Energy Drink 250ml',
     descricao: 'Red Bull te dá asas. Lata 250ml gelada.',
     preco: 11.90,
+    preco_original: 11.90,
+    preco_vigente: 11.90,
+    em_promocao: false,
     foto_url: '/products/red-bull-can.png',
     estoque_atual: 30,
     estoque_minimo: 10,
@@ -76,6 +92,9 @@ const PRODUTOS_MOCK: Produto[] = [
     nome: 'Gelo Saborizado Coco com Limão 200g',
     descricao: 'Gelo saborizado para drinks de gin e whisky.',
     preco: 4.90,
+    preco_original: 4.90,
+    preco_vigente: 4.90,
+    em_promocao: false,
     foto_url: '/products/gelo-saborizado-coco-limao.png',
     estoque_atual: 40,
     estoque_minimo: 15,
@@ -87,6 +106,10 @@ const PRODUTOS_MOCK: Produto[] = [
     nome: 'Combo Cavalo Branco + 4 Red Bull',
     descricao: '1 Garrafa Whisky White Horse 1L + 4 Energéticos Red Bull 250ml.',
     preco: 139.90,
+    preco_original: 139.90,
+    preco_vigente: 109.90,
+    em_promocao: true,
+    percentual_desconto: 21,
     foto_url: '/products/combo-cavalo-branco-redbull.png',
     estoque_atual: 8,
     estoque_minimo: 3,
@@ -99,6 +122,9 @@ const PRODUTOS_MOCK: Produto[] = [
     nome: 'Cerveja Corona Extra 330ml',
     descricao: 'Cerveja tipo American Adjunct Lager.',
     preco: 8.90,
+    preco_original: 8.90,
+    preco_vigente: 8.90,
+    em_promocao: false,
     foto_url: '/products/corona-extra.png',
     estoque_atual: 0,
     estoque_minimo: 5,
@@ -117,6 +143,26 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
     async function fetchProdutos() {
       setLoading(true);
       try {
+        // Tenta buscar da view com preços vigentes e promoções ativas
+        const { data: viewData, error: viewError } = await supabase
+          .from('vw_produtos_vitrine')
+          .select('*')
+          .eq('ativo', true);
+
+        if (!viewError && viewData && viewData.length > 0) {
+          const mapped = viewData.map((item: any) => ({
+            ...item,
+            preco: Number(item.preco_vigente ?? item.preco_original ?? item.preco),
+            preco_original: Number(item.preco_original ?? item.preco),
+            preco_vigente: Number(item.preco_vigente ?? item.preco),
+            em_promocao: Boolean(item.em_promocao),
+            percentual_desconto: Number(item.percentual_desconto || 0),
+          }));
+          setProdutos(mapped);
+          return;
+        }
+
+        // Fallback para tabela padrão caso a view não exista ainda no banco
         const { data, error } = await supabase
           .from('produtos')
           .select('*')
@@ -126,7 +172,15 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
         if (error || !data || data.length === 0) {
           setProdutos(PRODUTOS_MOCK);
         } else {
-          setProdutos(data as Produto[]);
+          setProdutos(
+            data.map((p: any) => ({
+              ...p,
+              preco_original: p.preco,
+              preco_vigente: p.preco,
+              em_promocao: false,
+              percentual_desconto: 0,
+            })) as Produto[]
+          );
         }
       } catch (err) {
         console.error('Erro ao buscar produtos no Supabase:', err);

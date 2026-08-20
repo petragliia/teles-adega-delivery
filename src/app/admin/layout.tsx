@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { AdminSidebar } from '@/components/admin/layout/AdminSidebar';
 import { AdminHeader } from '@/components/admin/layout/AdminHeader';
+import { LowStockAlertBanner } from '@/components/admin/layout/LowStockAlertBanner';
 import { MobileNav } from '@/components/admin/layout/MobileNav';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -29,6 +30,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           onToggleSound={() => setSoundEnabled((prev) => !prev)}
           onOpenMobileMenu={() => setMobileMenuOpen(true)}
         />
+        <LowStockAlertBanner />
         <main className="flex-1 overflow-y-auto p-4 md:p-6 pb-20 md:pb-6">{children}</main>
       </div>
       <MobileNav />

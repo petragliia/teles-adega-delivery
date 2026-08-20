@@ -2,11 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { createClient } from '@supabase/supabase-js';
 
-// Supabase Admin Client using Service Role Key (Bypasses RLS)
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-  process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-);
+export const dynamic = 'force-dynamic';
+
+function getSupabaseAdmin() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
+  const supabaseKey =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    'placeholder-service-key';
+
+  return createClient(supabaseUrl, supabaseKey);
+}
 
 function verificarAssinaturaMercadoPago(
   xSignature: string | null,
@@ -37,6 +43,7 @@ function verificarAssinaturaMercadoPago(
 
 export async function POST(req: NextRequest) {
   try {
+    const supabaseAdmin = getSupabaseAdmin();
     const xSignature = req.headers.get('x-signature');
     const xRequestId = req.headers.get('x-request-id');
 

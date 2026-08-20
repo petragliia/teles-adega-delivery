@@ -109,9 +109,16 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
 
                   {/* Nome e Preços */}
                   <div className="flex flex-1 flex-col min-w-0">
-                    <h4 className="text-xs font-bold text-white truncate">
-                      {item.produto.nome}
-                    </h4>
+                    <div className="flex items-center gap-1.5">
+                      <h4 className="text-xs font-bold text-white truncate">
+                        {item.produto.nome}
+                      </h4>
+                      {item.produto.em_promocao && (
+                        <span className="shrink-0 text-[9px] font-black uppercase px-1.5 py-0.2 rounded bg-amber-500/20 text-[#F59E0B] border border-amber-500/30">
+                          Promo
+                        </span>
+                      )}
+                    </div>
                     <span className="text-[11px] font-medium text-zinc-400">
                       {formatarPreco(item.precoUnitario)} un.
                     </span>

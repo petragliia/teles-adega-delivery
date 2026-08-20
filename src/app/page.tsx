@@ -40,15 +40,40 @@ export default function HomePage() {
           setCategorias(mappedCat);
         }
 
-        // Fetch active products
-        const { data: prodData } = await supabase
-          .from('produtos')
+        // Fetch active products from view or fallback
+        const { data: viewData, error: viewError } = await supabase
+          .from('vw_produtos_vitrine')
           .select('*')
-          .eq('ativo', true)
-          .order('destaque', { ascending: false });
+          .eq('ativo', true);
 
-        if (prodData && prodData.length > 0) {
-          setProdutos(prodData as Produto[]);
+        if (!viewError && viewData && viewData.length > 0) {
+          const mapped = viewData.map((item: any) => ({
+            ...item,
+            preco: Number(item.preco_vigente ?? item.preco_original ?? item.preco),
+            preco_original: Number(item.preco_original ?? item.preco),
+            preco_vigente: Number(item.preco_vigente ?? item.preco),
+            em_promocao: Boolean(item.em_promocao),
+            percentual_desconto: Number(item.percentual_desconto || 0),
+          }));
+          setProdutos(mapped);
+        } else {
+          const { data: prodData } = await supabase
+            .from('produtos')
+            .select('*')
+            .eq('ativo', true)
+            .order('destaque', { ascending: false });
+
+          if (prodData && prodData.length > 0) {
+            setProdutos(
+              prodData.map((p: any) => ({
+                ...p,
+                preco_original: p.preco,
+                preco_vigente: p.preco,
+                em_promocao: false,
+                percentual_desconto: 0,
+              })) as Produto[]
+            );
+          }
         }
       } catch (err) {
         console.error('Erro ao carregar dados da vitrine no Supabase:', err);
