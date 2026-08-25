@@ -1,9 +1,10 @@
 import { useEffect } from 'react';
 import { supabase } from '@/services/supabaseClient';
+import { Pedido } from '@/types/storefront';
 
 export function useRealtimeOrders(
-  onNewOrder: (order: any) => void,
-  onUpdateOrder: (order: any) => void
+  onNewOrder: (order: Pedido) => void,
+  onUpdateOrder: (order: Pedido) => void
 ) {
   useEffect(() => {
     const channel = supabase
@@ -17,7 +18,7 @@ export function useRealtimeOrders(
         },
         (payload) => {
           if (payload.new) {
-            onNewOrder(payload.new);
+            onNewOrder(payload.new as unknown as Pedido);
           }
         }
       )
@@ -30,7 +31,7 @@ export function useRealtimeOrders(
         },
         (payload) => {
           if (payload.new) {
-            onUpdateOrder(payload.new);
+            onUpdateOrder(payload.new as unknown as Pedido);
           }
         }
       )

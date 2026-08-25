@@ -42,10 +42,61 @@ export function exportToCSV({ filename, headers, rows }: ExportCSVOptions): void
   URL.revokeObjectURL(url);
 }
 
+export interface PedidoExport {
+  id?: string;
+  criado_em?: string;
+  cliente_id?: string;
+  cliente_nome?: string;
+  cliente_whatsapp?: string;
+  endereco_bairro?: string;
+  endereco_rua?: string;
+  endereco_numero?: string;
+  endereco_complemento?: string;
+  forma_pagamento?: string;
+  status?: string;
+  motoboy?: { id?: string; nome: string; telefone?: string } | null;
+  motoboy_id?: string | null;
+  valor_produtos?: number;
+  taxa_entrega?: number;
+  valor_total?: number;
+}
+
+export interface ClienteExport {
+  id?: string;
+  nome?: string;
+  whatsapp?: string;
+  bairro?: string;
+  endereco_completo?: string;
+  limite_fiado?: number;
+  saldo_fiado_atual?: number;
+  criado_em?: string;
+  atualizado_em?: string;
+}
+
+export interface ProdutoRankingExport {
+  nome: string;
+  categoria?: string;
+  quantidade_vendida?: number;
+  receita_total?: number;
+}
+
+export interface MotoboyExport {
+  id?: string;
+  nome: string;
+  telefone?: string;
+  ativo?: boolean;
+  total_entregas: number;
+  total_dinheiro?: number;
+  total_pix?: number;
+  total_fiado?: number;
+  total_taxas?: number;
+  total_faturado?: number;
+}
+
 /**
  * Exporta Extrato de Vendas do Período
  */
-export function exportVendasCSV(pedidos: any[], periodoLabel: string): void {
+export function exportVendasCSV(pedidos: PedidoExport[], periodoLabel: string): void {
   const headers = [
     'ID Pedido',
     'Data / Hora',
@@ -87,7 +138,7 @@ export function exportVendasCSV(pedidos: any[], periodoLabel: string): void {
 /**
  * Exporta Relatório de Clientes e Inadimplência do Fiado
  */
-export function exportFiadoCSV(clientes: any[]): void {
+export function exportFiadoCSV(clientes: ClienteExport[]): void {
   const headers = [
     'ID Cliente',
     'Nome do Cliente',
@@ -131,7 +182,7 @@ export function exportFiadoCSV(clientes: any[]): void {
 /**
  * Exporta Desempenho por Produto / Ranking Top Sellers
  */
-export function exportTopSellersCSV(produtosRanking: any[], periodoLabel: string): void {
+export function exportTopSellersCSV(produtosRanking: ProdutoRankingExport[], periodoLabel: string): void {
   const headers = [
     'Posição',
     'Produto',
@@ -167,7 +218,7 @@ export function exportTopSellersCSV(produtosRanking: any[], periodoLabel: string
 /**
  * Exporta Produtividade e Acerto de Caixa dos Motoboys
  */
-export function exportMotoboysCSV(motoboysData: any[], periodoLabel: string): void {
+export function exportMotoboysCSV(motoboysData: MotoboyExport[], periodoLabel: string): void {
   const headers = [
     'Motoboy',
     'Telefone',

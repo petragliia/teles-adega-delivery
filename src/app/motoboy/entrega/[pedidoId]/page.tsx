@@ -4,24 +4,19 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
-  Bike,
   Navigation,
   MapPin,
-  Phone,
   MessageCircle,
   ExternalLink,
-  ShieldCheck,
-  ShieldAlert,
   Loader2,
   CheckCircle2,
   Radio,
-  Clock,
   AlertTriangle,
   ArrowLeft,
-  DollarSign,
 } from 'lucide-react';
 import { supabase } from '@/services/supabaseClient';
 import { Motoboy } from '@/types/motoboy';
+import { Pedido } from '@/types/storefront';
 import { CodeValidationInput } from '@/components/admin/entregas/CodeValidationInput';
 
 export default function MotoboyEntregaPage() {
@@ -29,7 +24,7 @@ export default function MotoboyEntregaPage() {
   const router = useRouter();
   const pedidoId = params.pedidoId as string;
 
-  const [pedido, setPedido] = useState<any | null>(null);
+  const [pedido, setPedido] = useState<Pedido | null>(null);
   const [motoboys, setMotoboys] = useState<Motoboy[]>([]);
   const [selectedMotoboyId, setSelectedMotoboyId] = useState<string>('');
   const [loading, setLoading] = useState(true);
@@ -68,7 +63,7 @@ export default function MotoboyEntregaPage() {
         .single();
 
       if (pedidoErr) throw pedidoErr;
-      setPedido(pedidoData);
+      setPedido(pedidoData as unknown as Pedido);
 
       if (pedidoData.motoboy_id) {
         setSelectedMotoboyId(pedidoData.motoboy_id);
@@ -86,7 +81,7 @@ export default function MotoboyEntregaPage() {
           setSelectedMotoboyId(motoboysData[0].id);
         }
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Erro ao carregar dados da entrega:', err);
       setError('Não foi possível carregar as informações desta entrega.');
     } finally {
@@ -224,8 +219,9 @@ export default function MotoboyEntregaPage() {
 
       alert('🎉 Entrega concluída com sucesso! Parabéns pela corrida.');
       router.push('/admin/entregas');
-    } catch (err: any) {
-      alert(`Erro ao finalizar entrega: ${err.message}`);
+    } catch (err: unknown) {
+      const errMessage = err instanceof Error ? err.message : 'Erro ao finalizar';
+      alert(`Erro ao finalizar entrega: ${errMessage}`);
     }
   };
 

@@ -1,16 +1,27 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { Users, Search, DollarSign, ShieldAlert, Loader2, CheckCircle2, History, X } from 'lucide-react';
+import { Users, Search, DollarSign, Loader2, CheckCircle2, X } from 'lucide-react';
 import { supabase } from '@/services/supabaseClient';
 
+export interface Cliente {
+  id: string;
+  nome: string;
+  whatsapp: string;
+  bairro?: string;
+  endereco_completo?: string;
+  limite_fiado: number;
+  saldo_fiado_atual: number;
+  ativo?: boolean;
+}
+
 export default function AdminClientesPage() {
-  const [clientes, setClientes] = useState<any[]>([]);
+  const [clientes, setClientes] = useState<Cliente[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
   // Modal para dar baixa em Fiado
-  const [selectedCliente, setSelectedCliente] = useState<any | null>(null);
+  const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null);
   const [valorBaixa, setValorBaixa] = useState<string>('');
   const [processandoBaixa, setProcessandoBaixa] = useState(false);
   const [mensagemSucesso, setMensagemSucesso] = useState<string | null>(null);
@@ -25,7 +36,7 @@ export default function AdminClientesPage() {
         .order('nome', { ascending: true });
 
       if (error) throw error;
-      setClientes(data || []);
+      setClientes((data as Cliente[]) || []);
     } catch (err) {
       console.error('Erro ao carregar clientes:', err);
     } finally {
@@ -70,8 +81,9 @@ export default function AdminClientesPage() {
         setValorBaixa('');
         setMensagemSucesso(null);
       }, 2000);
-    } catch (err: any) {
-      alert(`Erro ao dar baixa no fiado: ${err.message}`);
+    } catch (err: unknown) {
+      const errMessage = err instanceof Error ? err.message : 'Erro ao dar baixa';
+      alert(`Erro ao dar baixa no fiado: ${errMessage}`);
     } finally {
       setProcessandoBaixa(false);
     }

@@ -143,9 +143,10 @@ export default function CheckoutPage() {
       // 3. Limpar a store Zustand e redirecionar
       clearCart();
       router.push(`/pedido/${pedido.id}`);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Erro ao processar pedido:', err);
-      setErrorMessage(err.message || 'Ocorreu um erro ao enviar seu pedido. Tente novamente.');
+      const errMessage = err instanceof Error ? err.message : 'Ocorreu um erro ao enviar seu pedido. Tente novamente.';
+      setErrorMessage(errMessage);
       setIsSubmitting(false);
     }
   };

@@ -4,13 +4,12 @@ import React, { useState } from 'react';
 import { ShieldCheck, ShieldAlert, Loader2, Lock } from 'lucide-react';
 
 interface CodeValidationInputProps {
-  pedidoId: string;
+  pedidoId?: string;
   codigoEsperado: string;
   onSuccess: () => void;
 }
 
 export function CodeValidationInput({
-  pedidoId,
   codigoEsperado,
   onSuccess,
 }: CodeValidationInputProps) {

@@ -30,7 +30,7 @@ export default function HomePage() {
         if (catData && catData.length > 0) {
           const mappedCat: Categoria[] = [
             { id: 'todas', nome: 'Todas', slug: 'todas', ativo: true },
-            ...catData.map((c: any) => ({
+            ...(catData as Categoria[]).map((c) => ({
               id: c.id,
               nome: c.nome,
               slug: c.slug || c.id,
@@ -47,11 +47,11 @@ export default function HomePage() {
           .eq('ativo', true);
 
         if (!viewError && viewData && viewData.length > 0) {
-          const mapped = viewData.map((item: any) => ({
-            ...item,
-            preco: Number(item.preco_vigente ?? item.preco_original ?? item.preco),
-            preco_original: Number(item.preco_original ?? item.preco),
-            preco_vigente: Number(item.preco_vigente ?? item.preco),
+          const mapped: Produto[] = (viewData as Record<string, unknown>[]).map((item) => ({
+            ...(item as unknown as Produto),
+            preco: Number(item.preco_vigente ?? item.preco_original ?? item.preco ?? 0),
+            preco_original: Number(item.preco_original ?? item.preco ?? 0),
+            preco_vigente: Number(item.preco_vigente ?? item.preco ?? 0),
             em_promocao: Boolean(item.em_promocao),
             percentual_desconto: Number(item.percentual_desconto || 0),
           }));
@@ -65,17 +65,17 @@ export default function HomePage() {
 
           if (prodData && prodData.length > 0) {
             setProdutos(
-              prodData.map((p: any) => ({
-                ...p,
-                preco_original: p.preco,
-                preco_vigente: p.preco,
+              (prodData as Record<string, unknown>[]).map((p) => ({
+                ...(p as unknown as Produto),
+                preco_original: Number(p.preco || 0),
+                preco_vigente: Number(p.preco || 0),
                 em_promocao: false,
                 percentual_desconto: 0,
-              })) as Produto[]
+              }))
             );
           }
         }
-      } catch (err) {
+      } catch (err: unknown) {
         console.error('Erro ao carregar dados da vitrine no Supabase:', err);
       }
     }

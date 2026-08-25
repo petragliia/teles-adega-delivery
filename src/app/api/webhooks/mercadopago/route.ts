@@ -142,8 +142,9 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ success: true, paymentId, mpStatus }, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[Webhook MercadoPago] Exceção não tratada:', error);
-    return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
+    const errMessage = error instanceof Error ? error.message : 'Internal Server Error';
+    return NextResponse.json({ error: errMessage }, { status: 500 });
   }
 }

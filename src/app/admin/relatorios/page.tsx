@@ -21,7 +21,6 @@ import {
   MessageCircle,
   FileSpreadsheet,
   Search,
-  Filter,
 } from 'lucide-react';
 import { supabase } from '@/services/supabaseClient';
 import {
@@ -29,9 +28,31 @@ import {
   exportFiadoCSV,
   exportTopSellersCSV,
   exportMotoboysCSV,
+  PedidoExport,
+  ClienteExport,
+  MotoboyExport,
 } from '@/lib/exportUtils';
 
 type PeriodFilterType = 'hoje' | '7dias' | 'mesAtual' | 'custom';
+
+export interface RelatorioPedidoItem {
+  id?: string;
+  quantidade: number;
+  preco_unitario: number;
+  subtotal: number;
+  produto_id?: string;
+  produto?: {
+    id?: string;
+    nome: string;
+    categoria?: { nome: string } | null;
+  } | null;
+}
+
+export interface RelatorioPedido extends PedidoExport {
+  id: string;
+  itens?: RelatorioPedidoItem[];
+  motoboy_id?: string | null;
+}
 
 export default function AdminRelatoriosPage() {
   const [periodFilter, setPeriodFilter] = useState<PeriodFilterType>('mesAtual');
@@ -48,9 +69,9 @@ export default function AdminRelatoriosPage() {
   const [refreshing, setRefreshing] = useState(false);
 
   // Dados brutos
-  const [pedidos, setPedidos] = useState<any[]>([]);
-  const [clientes, setClientes] = useState<any[]>([]);
-  const [motoboys, setMotoboys] = useState<any[]>([]);
+  const [pedidos, setPedidos] = useState<RelatorioPedido[]>([]);
+  const [clientes, setClientes] = useState<ClienteExport[]>([]);
+  const [motoboys, setMotoboys] = useState<MotoboyExport[]>([]);
 
   // Aba ativa: 'vendas' | 'top_sellers' | 'fiado' | 'motoboys'
   const [activeTab, setActiveTab] = useState<'top_sellers' | 'fiado' | 'motoboys' | 'vendas'>('top_sellers');
@@ -138,7 +159,7 @@ export default function AdminRelatoriosPage() {
         .order('criado_em', { ascending: false });
 
       if (pedidosError) throw pedidosError;
-      setPedidos(pedidosData || []);
+      setPedidos((pedidosData as RelatorioPedido[]) || []);
 
       // 2. Clientes (para análise de fiado)
       const { data: clientesData, error: clientesError } = await supabase
@@ -147,7 +168,7 @@ export default function AdminRelatoriosPage() {
         .order('saldo_fiado_atual', { ascending: false });
 
       if (clientesError) throw clientesError;
-      setClientes(clientesData || []);
+      setClientes((clientesData as ClienteExport[]) || []);
 
       // 3. Motoboys
       const { data: motoboysData, error: motoboysError } = await supabase
@@ -156,8 +177,8 @@ export default function AdminRelatoriosPage() {
         .order('nome', { ascending: true });
 
       if (motoboysError) throw motoboysError;
-      setMotoboys(motoboysData || []);
-    } catch (err) {
+      setMotoboys((motoboysData as MotoboyExport[]) || []);
+    } catch (err: unknown) {
       console.error('Erro ao carregar dados dos relatórios:', err);
     } finally {
       setLoading(false);
@@ -252,8 +273,8 @@ export default function AdminRelatoriosPage() {
     const map = new Map<string, { id: string; nome: string; categoria: string; quantidade_vendida: number; receita_total: number }>();
 
     pedidosEntregues.forEach((p) => {
-      (p.itens || []).forEach((item: any) => {
-        const prodId = item.produto_id || item.produto?.id || item.id;
+      (p.itens || []).forEach((item: RelatorioPedidoItem) => {
+        const prodId = item.produto_id || item.produto?.id || item.id || 'prod-unknown';
         const prodNome = item.produto?.nome || 'Produto sem nome';
         const categoriaNome = item.produto?.categoria?.nome || 'Geral';
         const qty = Number(item.quantidade || 0);

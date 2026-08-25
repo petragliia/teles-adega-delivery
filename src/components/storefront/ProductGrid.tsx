@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { Produto } from '@/types/storefront';
 import { ProductCard } from './ProductCard';
 import { supabase } from '@/services/supabaseClient';
-import { PackageSearch, RefreshCw } from 'lucide-react';
+import { PackageSearch } from 'lucide-react';
 
 export interface ProductGridProps {
   selectedCategorySlug: string;
@@ -150,11 +150,11 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
           .eq('ativo', true);
 
         if (!viewError && viewData && viewData.length > 0) {
-          const mapped = viewData.map((item: any) => ({
-            ...item,
-            preco: Number(item.preco_vigente ?? item.preco_original ?? item.preco),
-            preco_original: Number(item.preco_original ?? item.preco),
-            preco_vigente: Number(item.preco_vigente ?? item.preco),
+          const mapped: Produto[] = (viewData as Record<string, unknown>[]).map((item) => ({
+            ...(item as unknown as Produto),
+            preco: Number(item.preco_vigente ?? item.preco_original ?? item.preco ?? 0),
+            preco_original: Number(item.preco_original ?? item.preco ?? 0),
+            preco_vigente: Number(item.preco_vigente ?? item.preco ?? 0),
             em_promocao: Boolean(item.em_promocao),
             percentual_desconto: Number(item.percentual_desconto || 0),
           }));
@@ -173,13 +173,13 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
           setProdutos(PRODUTOS_MOCK);
         } else {
           setProdutos(
-            data.map((p: any) => ({
-              ...p,
-              preco_original: p.preco,
-              preco_vigente: p.preco,
+            (data as Record<string, unknown>[]).map((p) => ({
+              ...(p as unknown as Produto),
+              preco_original: Number(p.preco || 0),
+              preco_vigente: Number(p.preco || 0),
               em_promocao: false,
               percentual_desconto: 0,
-            })) as Produto[]
+            }))
           );
         }
       } catch (err) {

@@ -2,13 +2,14 @@
 
 import React, { useState } from 'react';
 import { KanbanOrderCard } from './KanbanOrderCard';
+import { Pedido } from '@/types/storefront';
 
 export interface KanbanBoardProps {
-  pedidos: any[];
+  pedidos: Pedido[];
   onAprovarPedido: (id: string) => void;
   onRecusarPedido: (id: string) => void;
   onAtribuirMotoboy: (id: string) => void;
-  onValidarCodigo: (id: string, codigo: string) => void;
+  onValidarCodigo: (id: string, codigo?: string) => void;
 }
 
 const COLUMNS = [

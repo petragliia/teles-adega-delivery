@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -16,7 +15,6 @@ const loginSchema = z.object({
 type LoginValues = z.infer<typeof loginSchema>;
 
 export default function AdminLoginPage() {
-  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -49,11 +47,10 @@ export default function AdminLoginPage() {
       if (data.session) {
         window.location.href = '/admin/dashboard';
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Erro de login:', err);
-      setErrorMessage(
-        err.message || 'Credenciais inválidas ou acesso não autorizado. Verifique e-mail e senha.'
-      );
+      const errMessage = err instanceof Error ? err.message : 'Credenciais inválidas ou acesso não autorizado. Verifique e-mail e senha.';
+      setErrorMessage(errMessage);
     } finally {
       setLoading(false);
     }

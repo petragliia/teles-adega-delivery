@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import {
   X,
-  Tag,
   Calendar,
   Clock,
   CheckCircle2,
@@ -248,11 +247,12 @@ export function PromotionFormModal({
       }
 
       onClose();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Erro ao salvar promoção:', err);
+      const errMessage = err instanceof Error ? err.message : 'Ocorreu um erro ao salvar a promoção no banco.';
       setErrors((prev) => ({
         ...prev,
-        submit: err.message || 'Ocorreu um erro ao salvar a promoção no banco.',
+        submit: errMessage,
       }));
     } finally {
       setSaving(false);

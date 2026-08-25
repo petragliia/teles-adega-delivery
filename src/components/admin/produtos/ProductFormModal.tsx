@@ -4,11 +4,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   X,
   Upload,
-  Image as ImageIcon,
   Loader2,
   AlertCircle,
   CheckCircle2,
-  DollarSign,
   Package,
   Layers,
   Sparkles,
@@ -167,7 +165,7 @@ export function ProductFormModal({
           setFotoUrl(publicData.publicUrl);
         }
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Erro ao fazer upload da imagem:', err);
       setFormErrors((prev) => ({ ...prev, foto_url: 'Falha no upload da imagem' }));
     } finally {
@@ -257,7 +255,7 @@ export function ProductFormModal({
           .single();
 
         if (error) throw error;
-        onSuccess(data || { ...produtoParaEditar, ...dbPayload }, true);
+        onSuccess((data as Produto) || { ...produtoParaEditar, ...dbPayload }, true);
       } else {
         const { data, error } = await supabase
           .from('produtos')
@@ -266,15 +264,16 @@ export function ProductFormModal({
           .single();
 
         if (error) throw error;
-        onSuccess(data || (dbPayload as any), false);
+        onSuccess((data as Produto) || ({ id: 'temp-' + Date.now(), ...dbPayload } as unknown as Produto), false);
       }
 
       onClose();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Erro ao salvar produto no Supabase:', err);
+      const errMessage = err instanceof Error ? err.message : 'Ocorreu um erro ao salvar o produto no banco de dados.';
       setFormErrors((prev) => ({
         ...prev,
-        general: err.message || 'Ocorreu um erro ao salvar o produto no banco de dados.',
+        general: errMessage,
       }));
     } finally {
       setSaving(false);

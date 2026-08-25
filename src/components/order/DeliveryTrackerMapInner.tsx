@@ -128,6 +128,7 @@ export default function DeliveryTrackerMapInner({
       map.remove();
       mapInstanceRef.current = null;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [origem, destino]);
 
   // Atualiza Marcador do Motoboy e Linha de Rota

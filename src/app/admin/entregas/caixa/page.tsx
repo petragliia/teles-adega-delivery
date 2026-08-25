@@ -2,13 +2,15 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, DollarSign, Bike, CheckCircle2, Loader2, Calendar } from 'lucide-react';
+import { ArrowLeft, DollarSign, CheckCircle2, Loader2, Calendar } from 'lucide-react';
 import { supabase } from '@/services/supabaseClient';
+import { Motoboy } from '@/types/motoboy';
+import { Pedido } from '@/types/storefront';
 
 export default function AdminFechamentoCaixaPage() {
-  const [motoboys, setMotoboys] = useState<any[]>([]);
+  const [motoboys, setMotoboys] = useState<Motoboy[]>([]);
   const [selectedMotoboyId, setSelectedMotoboyId] = useState<string>('todos');
-  const [pedidosEntregues, setPedidosEntregues] = useState<any[]>([]);
+  const [pedidosEntregues, setPedidosEntregues] = useState<Pedido[]>([]);
   const [loading, setLoading] = useState(true);
   const [acertoConfirmado, setAcertoConfirmado] = useState(false);
 

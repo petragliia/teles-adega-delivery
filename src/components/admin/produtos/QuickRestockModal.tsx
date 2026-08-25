@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useTransition } from 'react';
+import Image from 'next/image';
 import {
   X,
   Package,
@@ -9,9 +10,7 @@ import {
   CheckCircle2,
   AlertTriangle,
   Loader2,
-  Sparkles,
   Save,
-  RotateCcw,
   Boxes,
 } from 'lucide-react';
 import { supabase } from '@/services/supabaseClient';
@@ -72,7 +71,7 @@ export function QuickRestockModal({
       });
 
       setAdjustments(initialMap);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Erro ao carregar produtos com estoque crítico:', err);
     } finally {
       setLoading(false);
@@ -162,15 +161,16 @@ export function QuickRestockModal({
       });
 
       if (onSuccess) onSuccess();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(`Erro ao atualizar estoque do produto ${productId}:`, err);
       setAdjustments((prev) => ({
         ...prev,
         [productId]: { ...prev[productId], isSaving: false },
       }));
+      const errMessage = err instanceof Error ? err.message : 'Erro de conexão';
       setGlobalMessage({
         type: 'error',
-        text: `Falha ao salvar produto: ${err.message || 'Erro de conexão'}`,
+        text: `Falha ao salvar produto: ${errMessage}`,
       });
     }
   };
@@ -203,11 +203,12 @@ export function QuickRestockModal({
 
         if (onSuccess) onSuccess();
         fetchLowStockProducts();
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Erro ao salvar lote de estoque:', err);
+        const errMessage = err instanceof Error ? err.message : 'Tente novamente.';
         setGlobalMessage({
           type: 'error',
-          text: `Erro ao salvar em lote: ${err.message || 'Tente novamente.'}`,
+          text: `Erro ao salvar em lote: ${errMessage}`,
         });
       }
     });
@@ -315,11 +316,16 @@ export function QuickRestockModal({
                     {/* Left: Product Info */}
                     <div className="flex items-center gap-3 min-w-0">
                       {item.produto.foto_url ? (
-                        <img
-                          src={item.produto.foto_url}
-                          alt={item.produto.nome}
-                          className="w-12 h-12 rounded-xl object-cover border border-[#262626] shrink-0"
-                        />
+                        <div className="relative w-12 h-12 rounded-xl overflow-hidden border border-[#262626] shrink-0">
+                          <Image
+                            src={item.produto.foto_url}
+                            alt={item.produto.nome}
+                            fill
+                            sizes="48px"
+                            className="object-cover"
+                            unoptimized
+                          />
+                        </div>
                       ) : (
                         <div className="w-12 h-12 rounded-xl bg-zinc-800 border border-[#262626] flex items-center justify-center text-zinc-500 shrink-0">
                           <Package className="w-6 h-6" />

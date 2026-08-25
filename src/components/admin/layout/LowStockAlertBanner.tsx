@@ -4,12 +4,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   AlertTriangle,
   Boxes,
-  ChevronRight,
   ChevronDown,
-  Package,
   X,
-  RefreshCw,
-  Sparkles,
 } from 'lucide-react';
 import { supabase } from '@/services/supabaseClient';
 import { Produto } from '@/types/storefront';

@@ -6,16 +6,16 @@ import Link from 'next/link';
 import { ArrowLeft, MessageCircle, MapPin, Loader2, ShoppingBag } from 'lucide-react';
 import { ConfirmationCodeCard } from '@/components/order/ConfirmationCodeCard';
 import { OrderStatusStepper } from '@/components/order/OrderStatusStepper';
-import { DeliveryTrackerMap } from '@/components/order/DeliveryTrackerMap';
 import { useOrderRealtime, OrderRealtimeData } from '@/hooks/useOrderRealtime';
 import { supabase } from '@/services/supabaseClient';
+import { PedidoItem } from '@/types/storefront';
 
 export default function PedidoPage() {
   const params = useParams();
   const pedidoId = params.id as string;
 
   const [initialData, setInitialData] = useState<OrderRealtimeData | null>(null);
-  const [itens, setItens] = useState<any[]>([]);
+  const [itens, setItens] = useState<PedidoItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -41,9 +41,9 @@ export default function PedidoPage() {
           .eq('pedido_id', pedidoId);
 
         if (!itensError && itensData) {
-          setItens(itensData);
+          setItens(itensData as PedidoItem[]);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Erro ao carregar pedido:', err);
         setError('Pedido não encontrado ou indisponível no momento.');
       } finally {
@@ -107,20 +107,6 @@ export default function PedidoPage() {
 
         {/* Realtime Stepper */}
         <OrderStatusStepper status={pedido.status} formaPagamento={pedido.forma_pagamento} />
-
-        {/* Realtime Delivery Tracker Map */}
-        {pedido.status === 'em_rota' && (
-          <DeliveryTrackerMap
-            pedidoId={pedido.id}
-            motoboyId={pedido.motoboy_id}
-            status={pedido.status}
-            enderecoCliente={{
-              rua: pedido.endereco_rua,
-              numero: pedido.endereco_numero,
-              bairro: pedido.endereco_bairro,
-            }}
-          />
-        )}
 
         {/* Order Details & Address */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

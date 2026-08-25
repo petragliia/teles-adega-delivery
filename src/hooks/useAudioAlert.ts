@@ -14,9 +14,9 @@ export function useAudioAlert() {
       audio.play().catch(() => {
         // Fallback: Web Audio API Oscillator chime sound
         try {
-          const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-          if (!AudioContext) return;
-          const ctx = new AudioContext();
+          const AudioCtxClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+          if (!AudioCtxClass) return;
+          const ctx = new AudioCtxClass();
 
           const osc = ctx.createOscillator();
           const gain = ctx.createGain();

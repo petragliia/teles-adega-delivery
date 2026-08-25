@@ -73,7 +73,8 @@ export async function buscarCep(cep: string): Promise<BuscarCepResult> {
         ? undefined
         : 'Bairro não cadastrado em nossa área de entrega padrão. Entre em contato via WhatsApp para consultar frete especial.',
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errMessage = error instanceof Error ? error.message : 'Erro ao buscar o CEP. Tente novamente.';
     return {
       sucesso: false,
       logradouro: '',
@@ -82,7 +83,7 @@ export async function buscarCep(cep: string): Promise<BuscarCepResult> {
       uf: '',
       taxaEntrega: 0,
       bairroEncontrado: false,
-      mensagemErro: error.message || 'Erro ao buscar o CEP. Tente novamente.',
+      mensagemErro: errMessage,
     };
   }
 }

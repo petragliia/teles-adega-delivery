@@ -8,7 +8,6 @@ import {
   Clock,
   Radio,
   AlertTriangle,
-  MapPin,
   Phone,
   CheckCircle2,
   Loader2,
@@ -37,7 +36,7 @@ const DeliveryTrackerMapInner = dynamic(
 );
 
 interface DeliveryTrackerMapProps {
-  pedidoId: string;
+  pedidoId?: string;
   motoboyId?: string | null;
   status: string;
   enderecoCliente: {
@@ -50,13 +49,11 @@ interface DeliveryTrackerMapProps {
 }
 
 export function DeliveryTrackerMap({
-  pedidoId,
   motoboyId,
   status,
   enderecoCliente,
 }: DeliveryTrackerMapProps) {
   const [motoboy, setMotoboy] = useState<Motoboy | null>(null);
-  const [loading, setLoading] = useState(true);
 
   // Destino do cliente (usa coordenadas reais se existirem ou fallback calculado a partir do bairro na Baixada Santista)
   const destinoCoords = useMemo(() => {
@@ -77,12 +74,10 @@ export function DeliveryTrackerMap({
   useEffect(() => {
     async function fetchMotoboy() {
       if (!motoboyId) {
-        setLoading(false);
         return;
       }
 
       try {
-        setLoading(true);
         const { data, error } = await supabase
           .from('motoboys')
           .select('*')
@@ -94,8 +89,6 @@ export function DeliveryTrackerMap({
         }
       } catch (err) {
         console.error('Erro ao buscar dados do motoboy:', err);
-      } finally {
-        setLoading(false);
       }
     }
 

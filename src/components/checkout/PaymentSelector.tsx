@@ -77,7 +77,8 @@ export function PaymentSelector({
 
       setFiadoInfo(info);
       onFiadoVerified(info);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      console.error('Erro ao consultar cadastro fiado:', err);
       setErroFiado('Erro ao consultar cadastro. Tente novamente.');
       setFiadoInfo(null);
       onFiadoVerified(null);

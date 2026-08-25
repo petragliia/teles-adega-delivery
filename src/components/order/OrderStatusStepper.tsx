@@ -1,12 +1,12 @@
 'use client';
 
 import React from 'react';
-import { CreditCard, Clock, PackageCheck, Bike, CheckCircle2, XCircle } from 'lucide-react';
+import { Clock, PackageCheck, Bike, CheckCircle2, XCircle } from 'lucide-react';
 import { StatusPedido } from '@/types/storefront';
 
 interface OrderStatusStepperProps {
   status: StatusPedido;
-  formaPagamento: string;
+  formaPagamento?: string;
 }
 
 const STEPS = [
@@ -54,7 +54,7 @@ function getActiveStepIndex(status: StatusPedido): number {
   }
 }
 
-export function OrderStatusStepper({ status, formaPagamento }: OrderStatusStepperProps) {
+export function OrderStatusStepper({ status }: OrderStatusStepperProps) {
   if (status === 'cancelado') {
     return (
       <div className="bg-[#161616] border border-red-500/30 rounded-2xl p-6 text-center space-y-3">
@@ -87,7 +87,6 @@ export function OrderStatusStepper({ status, formaPagamento }: OrderStatusSteppe
         {STEPS.map((step, index) => {
           const isCompleted = index < activeIndex;
           const isCurrent = index === activeIndex;
-          const Icon = step.icon;
 
           return (
             <div key={step.key} className="relative flex items-start gap-4">

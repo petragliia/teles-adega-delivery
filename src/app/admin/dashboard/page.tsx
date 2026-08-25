@@ -6,9 +6,10 @@ import { KanbanBoard } from '@/components/admin/kanban/KanbanBoard';
 import { useRealtimeOrders } from '@/hooks/useRealtimeOrders';
 import { useAudioAlert } from '@/hooks/useAudioAlert';
 import { supabase } from '@/services/supabaseClient';
+import { Pedido, PedidoItem } from '@/types/storefront';
 
 export default function AdminDashboardPage() {
-  const [pedidos, setPedidos] = useState<any[]>([]);
+  const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [loading, setLoading] = useState(true);
   const { playNewOrderSound } = useAudioAlert();
 
@@ -30,17 +31,19 @@ export default function AdminDashboardPage() {
 
       if (error) throw error;
 
-      const formatted = (data || []).map((p) => ({
-        ...p,
-        itens: (p.itens || []).map((item: any) => ({
-          quantidade: item.quantidade,
-          subtotal: item.subtotal,
-          produto_nome: item.produto?.nome || 'Produto',
+      const formatted: Pedido[] = ((data as Record<string, unknown>[]) || []).map((p) => ({
+        ...(p as unknown as Pedido),
+        itens: ((p.itens as Record<string, unknown>[]) || []).map((item) => ({
+          produto_id: String(item.produto_id || ''),
+          quantidade: Number(item.quantidade || 0),
+          preco_unitario: Number(item.preco_unitario || 0),
+          subtotal: Number(item.subtotal || 0),
+          produto_nome: (item.produto as { nome?: string })?.nome || 'Produto',
         })),
       }));
 
       setPedidos(formatted);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Erro ao carregar pedidos:', err);
     } finally {
       setLoading(false);
@@ -53,7 +56,7 @@ export default function AdminDashboardPage() {
 
   // Handlers para eventos em tempo real
   const handleNewOrder = useCallback(
-    async (newOrder: any) => {
+    async (newOrder: Pedido) => {
       // 1. Tocar o alerta sonoro imediatamente para pedidos novos
       if (newOrder.status === 'pendente_aprovacao' || newOrder.status === 'aguardando_pagamento') {
         playNewOrderSound();
@@ -69,28 +72,30 @@ export default function AdminDashboardPage() {
       try {
         const { data: itensData } = await supabase
           .from('itens_pedido')
-          .select('quantidade, subtotal, produto:produtos(nome)')
+          .select('quantidade, subtotal, produto_id, preco_unitario, produto:produtos(nome)')
           .eq('pedido_id', newOrder.id);
 
         if (itensData && itensData.length > 0) {
-          const formattedItens = itensData.map((item: any) => ({
-            quantidade: item.quantidade,
-            subtotal: item.subtotal,
-            produto_nome: item.produto?.nome || 'Produto',
+          const formattedItens: PedidoItem[] = (itensData as Record<string, unknown>[]).map((item) => ({
+            produto_id: String(item.produto_id || ''),
+            preco_unitario: Number(item.preco_unitario || 0),
+            quantidade: Number(item.quantidade || 0),
+            subtotal: Number(item.subtotal || 0),
+            produto_nome: (item.produto as { nome?: string })?.nome || 'Produto',
           }));
 
           setPedidos((prev) =>
             prev.map((p) => (p.id === newOrder.id ? { ...p, itens: formattedItens } : p))
           );
         }
-      } catch (err) {
+      } catch (err: unknown) {
         console.error('Erro ao carregar itens do novo pedido:', err);
       }
     },
     [playNewOrderSound]
   );
 
-  const handleUpdateOrder = useCallback((updatedOrder: any) => {
+  const handleUpdateOrder = useCallback((updatedOrder: Pedido) => {
     setPedidos((prev) =>
       prev.map((p) => (p.id === updatedOrder.id ? { ...p, ...updatedOrder } : p))
     );
@@ -111,8 +116,9 @@ export default function AdminDashboardPage() {
       setPedidos((prev) =>
         prev.map((p) => (p.id === id ? { ...p, status: 'em_preparo' } : p))
       );
-    } catch (err: any) {
-      alert(`Erro ao aprovar pedido: ${err.message}`);
+    } catch (err: unknown) {
+      const errMessage = err instanceof Error ? err.message : 'Erro ao aprovar';
+      alert(`Erro ao aprovar pedido: ${errMessage}`);
     }
   };
 
@@ -131,8 +137,9 @@ export default function AdminDashboardPage() {
       setPedidos((prev) =>
         prev.map((p) => (p.id === id ? { ...p, status: 'cancelado' } : p))
       );
-    } catch (err: any) {
-      alert(`Erro ao recusar pedido: ${err.message}`);
+    } catch (err: unknown) {
+      const errMessage = err instanceof Error ? err.message : 'Erro ao recusar';
+      alert(`Erro ao recusar pedido: ${errMessage}`);
     }
   };
 
@@ -148,12 +155,13 @@ export default function AdminDashboardPage() {
       setPedidos((prev) =>
         prev.map((p) => (p.id === id ? { ...p, status: 'em_rota' } : p))
       );
-    } catch (err: any) {
-      alert(`Erro ao despachar pedido: ${err.message}`);
+    } catch (err: unknown) {
+      const errMessage = err instanceof Error ? err.message : 'Erro ao despachar';
+      alert(`Erro ao despachar pedido: ${errMessage}`);
     }
   };
 
-  const handleValidarCodigo = async (id: string, codigo: string) => {
+  const handleValidarCodigo = async (id: string) => {
     try {
       const { error } = await supabase
         .from('pedidos')
@@ -165,8 +173,9 @@ export default function AdminDashboardPage() {
       setPedidos((prev) =>
         prev.map((p) => (p.id === id ? { ...p, status: 'entregue' } : p))
       );
-    } catch (err: any) {
-      alert(`Erro ao finalizar entrega: ${err.message}`);
+    } catch (err: unknown) {
+      const errMessage = err instanceof Error ? err.message : 'Erro ao finalizar';
+      alert(`Erro ao finalizar entrega: ${errMessage}`);
     }
   };
 

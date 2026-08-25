@@ -12,11 +12,8 @@ import {
   Eye,
   EyeOff,
   Calendar,
-  Clock,
   RefreshCw,
   Percent,
-  CheckCircle2,
-  AlertCircle,
   Package,
 } from 'lucide-react';
 import { supabase } from '@/services/supabaseClient';
@@ -80,10 +77,11 @@ export default function AdminPromocoesPage() {
         .order('criado_em', { ascending: false });
 
       if (promoError) throw promoError;
-      setPromocoes(promoData || []);
-    } catch (err: any) {
+      setPromocoes((promoData as Promocao[]) || []);
+    } catch (err: unknown) {
       console.error('Erro ao carregar promoções:', err);
-      addToast('error', 'Erro ao carregar dados', err.message || 'Verifique sua conexão.');
+      const errMessage = err instanceof Error ? err.message : 'Verifique sua conexão.';
+      addToast('error', 'Erro ao carregar dados', errMessage);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -208,13 +206,14 @@ export default function AdminPromocoesPage() {
           novoStatus ? 'ativada com sucesso' : 'pausada'
         }.`
       );
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Erro ao alterar status da promoção:', err);
       // Reverter
       setPromocoes((prev) =>
         prev.map((item) => (item.id === p.id ? { ...item, ativo: p.ativo } : item))
       );
-      addToast('error', 'Erro ao alterar status', err.message);
+      const errMessage = err instanceof Error ? err.message : 'Erro ao alterar status';
+      addToast('error', 'Erro ao alterar status', errMessage);
     }
   };
 
@@ -230,9 +229,10 @@ export default function AdminPromocoesPage() {
       addToast('success', 'Promoção Excluída', 'A regra promocional foi removida com sucesso.');
       setDeleteModalOpen(false);
       setPromocaoToDelete(null);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Erro ao deletar promoção:', err);
-      addToast('error', 'Falha na Exclusão', err.message || 'Erro ao tentar deletar promoção.');
+      const errMessage = err instanceof Error ? err.message : 'Erro ao tentar deletar promoção.';
+      addToast('error', 'Falha na Exclusão', errMessage);
     } finally {
       setIsDeleting(false);
     }
@@ -425,7 +425,7 @@ export default function AdminPromocoesPage() {
             <button
               key={f.id}
               type="button"
-              onClick={() => setStatusFilter(f.id as any)}
+              onClick={() => setStatusFilter(f.id as 'todas' | 'ativas' | 'agendadas' | 'inativas')}
               className={`px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${
                 statusFilter === f.id
                   ? 'bg-[#F59E0B] text-black shadow-md'

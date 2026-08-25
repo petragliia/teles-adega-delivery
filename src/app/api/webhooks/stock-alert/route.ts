@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { Produto } from '@/types/storefront';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,7 +32,7 @@ interface AlertResult {
 }
 
 async function processProductAlert(
-  prod: any,
+  prod: Produto,
   force: boolean = false
 ): Promise<AlertResult> {
   const supabaseAdmin = getSupabaseAdmin();
@@ -83,7 +84,6 @@ async function processProductAlert(
   };
 
   // 3. Disparar POST para o n8n
-  let n8nSuccess = false;
   try {
     const response = await fetch(n8nWebhookUrl, {
       method: 'POST',
@@ -93,19 +93,14 @@ async function processProductAlert(
       body: JSON.stringify(webhookPayload),
     });
 
-    if (response.ok) {
-      n8nSuccess = true;
-    } else {
+    if (!response.ok) {
       console.warn(
         `[StockAlert Webhook] Resposta não-200 do n8n (${response.status}):`,
         await response.text().catch(() => '')
       );
-      // Continuamos para registrar o timestamp no banco mesmo se o n8n estiver em warmup
-      n8nSuccess = true;
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('[StockAlert Webhook] Erro ao disparar webhook para n8n:', err);
-    // Em caso de falha de conexão com n8n, registra tentativa
   }
 
   // 4. Atualizar 'ultimo_alerta_estoque_em' no Supabase
@@ -149,7 +144,7 @@ export async function POST(req: NextRequest) {
     const body: StockAlertPayload = await req.json().catch(() => ({}));
     const { produto_id, force = false } = body;
 
-    let produtosToCheck: any[] = [];
+    let produtosToCheck: Produto[] = [];
 
     if (produto_id) {
       const { data: prod, error } = await supabaseAdmin
@@ -172,7 +167,7 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      produtosToCheck = [prod];
+      produtosToCheck = [prod as Produto];
     } else {
       // Sem produto_id: Escaneia todos os produtos em estoque crítico
       const { data, error } = await supabaseAdmin
@@ -185,8 +180,8 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Erro ao consultar banco de dados' }, { status: 500 });
       }
 
-      produtosToCheck = (data || []).filter(
-        (p: any) => Number(p.estoque_atual) <= Number(p.estoque_minimo)
+      produtosToCheck = ((data as Produto[]) || []).filter(
+        (p) => Number(p.estoque_atual) <= Number(p.estoque_minimo)
       );
     }
 
@@ -214,10 +209,11 @@ export async function POST(req: NextRequest) {
       cooldownCount,
       results,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('[StockAlert Webhook] Erro inesperado:', err);
+    const errMessage = err instanceof Error ? err.message : 'Internal Server Error';
     return NextResponse.json(
-      { error: err.message || 'Internal Server Error' },
+      { error: errMessage },
       { status: 500 }
     );
   }

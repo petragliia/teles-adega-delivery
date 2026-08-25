@@ -62,7 +62,9 @@ export function useOrderRealtime(pedidoId: string, initialData: OrderRealtimeDat
             try {
               const audio = new Audio('/sounds/notification.mp3');
               audio.play().catch(() => {});
-            } catch (e) {}
+            } catch {
+              // Ignore audio play errors
+            }
           }
         }
       )

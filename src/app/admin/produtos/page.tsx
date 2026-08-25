@@ -13,11 +13,8 @@ import {
   EyeOff,
   Boxes,
   Minus,
-  CheckCircle2,
   RefreshCw,
   Sparkles,
-  Layers,
-  Filter,
 } from 'lucide-react';
 import { supabase } from '@/services/supabaseClient';
 import { Categoria, Produto } from '@/types/storefront';
@@ -82,9 +79,10 @@ export default function AdminProdutosPage() {
 
       if (prodError) throw prodError;
       setProdutos(prodData || []);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Erro ao carregar produtos:', err);
-      addToast('error', 'Erro ao carregar dados', err.message || 'Verifique sua conexão.');
+      const errMessage = err instanceof Error ? err.message : 'Verifique sua conexão.';
+      addToast('error', 'Erro ao carregar dados', errMessage);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -191,7 +189,7 @@ export default function AdminProdutosPage() {
 
       if (error) throw error;
       addToast('success', 'Estoque Atualizado', `${targetProd.nome}: agora com ${novoEstoque} un.`);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Erro ao ajustar estoque:', err);
       // Reverter estado local
       setProdutos((prev) =>
@@ -228,13 +226,14 @@ export default function AdminProdutosPage() {
         novoStatus ? 'Produto Ativado' : 'Produto Ocultado',
         `${p.nome} está ${novoStatus ? 'visível na vitrine' : 'oculto para os clientes'}.`
       );
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Erro ao alterar status:', err);
       // Reverter
       setProdutos((prev) =>
         prev.map((prod) => (prod.id === p.id ? { ...prod, ativo: p.ativo } : prod))
       );
-      addToast('error', 'Erro ao alterar status', err.message);
+      const errMessage = err instanceof Error ? err.message : 'Falha ao alterar status.';
+      addToast('error', 'Erro ao alterar status', errMessage);
     }
   };
 
@@ -256,9 +255,10 @@ export default function AdminProdutosPage() {
       addToast('success', 'Produto Excluído', 'O item foi removido do banco de dados.');
       setDeleteModalOpen(false);
       setProductToDelete(null);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Erro ao deletar produto:', err);
-      addToast('error', 'Falha na Exclusão', err.message || 'Erro ao tentar deletar o produto.');
+      const errMessage = err instanceof Error ? err.message : 'Erro ao tentar deletar o produto.';
+      addToast('error', 'Falha na Exclusão', errMessage);
     } finally {
       setIsDeleting(false);
     }
@@ -281,9 +281,10 @@ export default function AdminProdutosPage() {
       addToast('warning', 'Produto Ocultado', 'O produto foi desativado e não aparecerá na vitrine.');
       setDeleteModalOpen(false);
       setProductToDelete(null);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Erro ao desativar produto:', err);
-      addToast('error', 'Erro', err.message || 'Falha ao desativar produto.');
+      const errMessage = err instanceof Error ? err.message : 'Falha ao desativar produto.';
+      addToast('error', 'Erro', errMessage);
     } finally {
       setIsDeleting(false);
     }
@@ -445,15 +446,15 @@ export default function AdminProdutosPage() {
           {/* Filtros de Status (Chips) */}
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
             {[
-              { id: 'todos', label: 'Todos' },
-              { id: 'critico', label: 'Estoque Baixo', badge: metrics.critico },
-              { id: 'ativo', label: 'Ativos' },
-              { id: 'inativo', label: 'Ocultos' },
+              { id: 'todos' as const, label: 'Todos' },
+              { id: 'critico' as const, label: 'Estoque Baixo', badge: metrics.critico },
+              { id: 'ativo' as const, label: 'Ativos' },
+              { id: 'inativo' as const, label: 'Ocultos' },
             ].map((f) => (
               <button
                 key={f.id}
                 type="button"
-                onClick={() => setSelectedStatusFilter(f.id as any)}
+                onClick={() => setSelectedStatusFilter(f.id)}
                 className={`px-3.5 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${
                   selectedStatusFilter === f.id
                     ? 'bg-[#F59E0B] text-black shadow-md'

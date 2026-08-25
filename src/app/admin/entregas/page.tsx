@@ -2,13 +2,15 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { Bike, DollarSign, Loader2, RefreshCw, CheckCircle2, UserCheck, ShieldCheck } from 'lucide-react';
+import { Bike, DollarSign, Loader2, RefreshCw } from 'lucide-react';
 import { supabase } from '@/services/supabaseClient';
 import { CodeValidationInput } from '@/components/admin/entregas/CodeValidationInput';
+import { Motoboy } from '@/types/motoboy';
+import { Pedido } from '@/types/storefront';
 
 export default function AdminEntregasPage() {
-  const [pedidos, setPedidos] = useState<any[]>([]);
-  const [motoboys, setMotoboys] = useState<any[]>([]);
+  const [pedidos, setPedidos] = useState<Pedido[]>([]);
+  const [motoboys, setMotoboys] = useState<Motoboy[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
@@ -34,8 +36,8 @@ export default function AdminEntregasPage() {
         .order('criado_em', { ascending: false });
 
       if (error) throw error;
-      setPedidos(pedidosData || []);
-    } catch (err) {
+      setPedidos((pedidosData as Pedido[]) || []);
+    } catch (err: unknown) {
       console.error('Erro ao carregar entregas:', err);
     } finally {
       setLoading(false);
@@ -61,8 +63,9 @@ export default function AdminEntregasPage() {
 
       if (error) throw error;
       fetchData();
-    } catch (err: any) {
-      alert(`Erro ao atribuir motoboy: ${err.message}`);
+    } catch (err: unknown) {
+      const errMessage = err instanceof Error ? err.message : 'Erro ao atribuir motoboy';
+      alert(`Erro ao atribuir motoboy: ${errMessage}`);
     }
   };
 
@@ -78,8 +81,9 @@ export default function AdminEntregasPage() {
 
       if (error) throw error;
       fetchData();
-    } catch (err: any) {
-      alert(`Erro ao finalizar entrega: ${err.message}`);
+    } catch (err: unknown) {
+      const errMessage = err instanceof Error ? err.message : 'Erro ao finalizar entrega';
+      alert(`Erro ao finalizar entrega: ${errMessage}`);
     }
   };
 
