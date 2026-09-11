@@ -129,13 +129,21 @@ export function PromotionFormModal({
 
   if (!isOpen) return null;
 
+  const parsePreco = (val: string | number): number => {
+    if (typeof val === 'number') return isNaN(val) ? 0 : val;
+    if (!val) return 0;
+    let cleaned = String(val).trim().replace(/^R\$\s*/i, '');
+    if (cleaned.includes(',')) {
+      cleaned = cleaned.replace(/\./g, '').replace(',', '.');
+    }
+    const num = parseFloat(cleaned.replace(/[^0-9.]/g, ''));
+    return isNaN(num) ? 0 : num;
+  };
+
   // Produto selecionado atual
   const selectedProduct = produtos.find((p) => p.id === formData.produto_id);
   const precoOriginal = selectedProduct ? Number(selectedProduct.preco) : 0;
-  const precoPromoNum =
-    typeof formData.preco_promocional === 'number'
-      ? formData.preco_promocional
-      : parseFloat(String(formData.preco_promocional || '0').replace(',', '.'));
+  const precoPromoNum = parsePreco(formData.preco_promocional);
 
   // Cálculo do percentual de desconto
   const percentualDesconto =
@@ -179,73 +187,60 @@ export function PromotionFormModal({
       errs.produto_id = 'Selecione um produto para a promoção.';
     }
 
-    if (!formData.preco_promocional || precoPromoNum <= 0) {
-      errs.preco_promocional = 'Informe um preço promocional válido maior que zero.';
+    if (!precoPromoNum || precoPromoNum <= 0) {
+      errs.preco_promocional = 'Informe um preço promocional válido.';
     } else if (precoOriginal > 0 && precoPromoNum >= precoOriginal) {
-      errs.preco_promocional = `O preço promocional (R$ ${precoPromoNum.toFixed(
-        2
-      )}) deve ser estritamente menor que o preço original (R$ ${precoOriginal.toFixed(2)}).`;
+      errs.preco_promocional = `O preço promocional deve ser menor que o original (R$ ${precoOriginal.toFixed(2)}).`;
     }
 
     if (!formData.data_inicio) {
-      errs.data_inicio = 'Informe a data e horário de início.';
+      errs.data_inicio = 'Informe a data de início.';
     }
 
     if (!formData.data_fim) {
-      errs.data_fim = 'Informe a data e horário de término.';
-    } else if (
-      formData.data_inicio &&
-      new Date(formData.data_fim) <= new Date(formData.data_inicio)
-    ) {
+      errs.data_fim = 'Informe a data de término.';
+    } else if (new Date(formData.data_fim) <= new Date(formData.data_inicio)) {
       errs.data_fim = 'A data de término deve ser posterior à data de início.';
     }
 
-    if (!formData.dias_semana || formData.dias_semana.length === 0) {
-      errs.dias_semana = 'Selecione pelo menos um dia da semana para vigência.';
+    if (formData.dias_semana.length === 0) {
+      errs.dias_semana = 'Selecione ao menos 1 dia da semana.';
     }
 
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
 
-  // Submit Handler
+  // Submit
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
 
-    setSaving(true);
     try {
+      setSaving(true);
+
       const payload = {
+        ...(isEdit && promocaoToEdit ? { id: promocaoToEdit.id } : {}),
         produto_id: formData.produto_id,
         preco_promocional: precoPromoNum,
         data_inicio: new Date(formData.data_inicio).toISOString(),
         data_fim: new Date(formData.data_fim).toISOString(),
         dias_semana: formData.dias_semana,
         ativo: formData.ativo,
-        atualizado_em: new Date().toISOString(),
       };
 
-      if (isEdit && promocaoToEdit) {
-        const { data, error } = await supabase
-          .from('promocoes')
-          .update(payload)
-          .eq('id', promocaoToEdit.id)
-          .select(`*, produto:produtos(*)`)
-          .single();
+      const response = await fetch('/api/admin/promocoes', {
+        method: isEdit ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
 
-        if (error) throw error;
-        onSuccess(data as Promocao, true);
-      } else {
-        const { data, error } = await supabase
-          .from('promocoes')
-          .insert(payload)
-          .select(`*, produto:produtos(*)`)
-          .single();
-
-        if (error) throw error;
-        onSuccess(data as Promocao, false);
+      const resJson = await response.json();
+      if (!response.ok || resJson.error) {
+        throw new Error(resJson.error || 'Erro ao salvar promoção.');
       }
 
+      onSuccess(resJson.data as Promocao, isEdit);
       onClose();
     } catch (err: unknown) {
       console.error('Erro ao salvar promoção:', err);

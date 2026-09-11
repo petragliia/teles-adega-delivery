@@ -45,10 +45,13 @@ export function KanbanOrderCard({
   const [codigoInput, setCodigoInput] = useState('');
   const [erroCodigo, setErroCodigo] = useState(false);
 
-  const cleanWhatsapp = pedido.cliente_whatsapp.replace(/\D/g, '');
-  const whatsappUrl = `https://wa.me/55${cleanWhatsapp}?text=${encodeURIComponent(
-    `Olá ${pedido.cliente_nome}! Sobre o seu pedido #${pedido.id.slice(0, 6)} da Teles Adega:`
-  )}`;
+  const cleanWhatsapp = (pedido.cliente_whatsapp || '').replace(/\D/g, '');
+  const orderShortId = pedido.id ? pedido.id.slice(0, 6) : '------';
+  const whatsappUrl = cleanWhatsapp
+    ? `https://wa.me/55${cleanWhatsapp}?text=${encodeURIComponent(
+        `Olá ${pedido.cliente_nome || 'Cliente'}! Sobre o seu pedido #${orderShortId} da Teles Adega:`
+      )}`
+    : null;
 
   const isNovoPendente =
     pedido.status === 'pendente_aprovacao' || pedido.status === 'aguardando_pagamento';
@@ -74,7 +77,7 @@ export function KanbanOrderCard({
       {/* Header Info */}
       <div className="flex items-center justify-between border-b border-[#262626] pb-2.5">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-mono font-bold text-white">#{pedido.id.slice(0, 6)}</span>
+          <span className="text-xs font-mono font-bold text-white">#{orderShortId}</span>
           <span
             className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
               pedido.forma_pagamento === 'pix'
@@ -91,30 +94,39 @@ export function KanbanOrderCard({
 
         <span className="text-[10px] text-zinc-500 flex items-center gap-1">
           <Clock className="w-3 h-3 text-zinc-400" />
-          {new Date(pedido.criado_em).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          {pedido.criado_em ? new Date(pedido.criado_em).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}
         </span>
       </div>
 
       {/* Customer & Address Details */}
       <div className="space-y-1.5 text-xs">
         <div className="flex items-center justify-between">
-          <span className="font-bold text-white text-sm">{pedido.cliente_nome}</span>
-          <a
-            href={whatsappUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-2 py-1 bg-[#22C55E]/10 hover:bg-[#22C55E]/20 border border-[#22C55E]/30 text-[#22C55E] rounded-lg text-[11px] font-bold flex items-center gap-1 transition"
-          >
-            <MessageCircle className="w-3.5 h-3.5" />
-            Whats
-          </a>
+          <span className="font-bold text-white text-sm">{pedido.cliente_nome || 'Cliente'}</span>
+          {whatsappUrl ? (
+            <a
+              href={whatsappUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-2 py-1 bg-[#22C55E]/10 hover:bg-[#22C55E]/20 border border-[#22C55E]/30 text-[#22C55E] rounded-lg text-[11px] font-bold flex items-center gap-1 transition"
+            >
+              <MessageCircle className="w-3.5 h-3.5" />
+              Whats
+            </a>
+          ) : (
+            <span className="text-[10px] text-zinc-500 italic">Sem WhatsApp</span>
+          )}
         </div>
 
         <div className="flex items-start gap-1 text-zinc-400 text-[11px]">
           <MapPin className="w-3.5 h-3.5 text-[#F59E0B] shrink-0 mt-0.5" />
           <span>
-            <strong className="text-zinc-200">{pedido.endereco_bairro}</strong> - {pedido.endereco_rua}, Nº{' '}
-            {pedido.endereco_numero}
+            {pedido.endereco_bairro ? (
+              <strong className="text-zinc-200">{pedido.endereco_bairro}</strong>
+            ) : null}
+            {pedido.endereco_bairro && pedido.endereco_rua ? ' - ' : ''}
+            {pedido.endereco_rua}
+            {pedido.endereco_numero ? `, Nº ${pedido.endereco_numero}` : ''}
+            {!pedido.endereco_rua && !pedido.endereco_bairro && 'Endereço não informado'}
           </span>
         </div>
       </div>

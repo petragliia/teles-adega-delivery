@@ -192,12 +192,16 @@ export default function AdminPromocoesPage() {
     );
 
     try {
-      const { error } = await supabase
-        .from('promocoes')
-        .update({ ativo: novoStatus, atualizado_em: new Date().toISOString() })
-        .eq('id', p.id);
+      const response = await fetch('/api/admin/promocoes', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: p.id, ativo: novoStatus }),
+      });
 
-      if (error) throw error;
+      const resJson = await response.json();
+      if (!response.ok || resJson.error) {
+        throw new Error(resJson.error || 'Erro ao alterar status');
+      }
 
       addToast(
         novoStatus ? 'success' : 'warning',
@@ -221,9 +225,14 @@ export default function AdminPromocoesPage() {
   const handleConfirmDelete = async (id: string) => {
     try {
       setIsDeleting(true);
-      const { error } = await supabase.from('promocoes').delete().eq('id', id);
+      const response = await fetch(`/api/admin/promocoes?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+      });
 
-      if (error) throw error;
+      const resJson = await response.json();
+      if (!response.ok || resJson.error) {
+        throw new Error(resJson.error || 'Erro ao deletar promoção.');
+      }
 
       setPromocoes((prev) => prev.filter((p) => p.id !== id));
       addToast('success', 'Promoção Excluída', 'A regra promocional foi removida com sucesso.');

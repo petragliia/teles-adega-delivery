@@ -10,7 +10,6 @@ import { OrderSummary } from '@/components/checkout/OrderSummary';
 import { useCartStore, selectCartSubtotal, selectCartTotal } from '@/store/useCartStore';
 import { useHydrated } from '@/hooks/useHydrated';
 import { FormaPagamento, StatusPedido } from '@/types/storefront';
-import { ClienteFiadoInfo } from '@/types/checkout';
 import { supabase } from '@/services/supabaseClient';
 
 export default function CheckoutPage() {
@@ -26,7 +25,6 @@ export default function CheckoutPage() {
   const [addressData, setAddressData] = useState<AddressFormValues | null>(null);
   const [formaPagamento, setFormaPagamento] = useState<FormaPagamento>('pix');
   const [trocoPara, setTrocoPara] = useState<number | undefined>(undefined);
-  const [fiadoInfo, setFiadoInfo] = useState<ClienteFiadoInfo | null>(null);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -67,7 +65,11 @@ export default function CheckoutPage() {
 
     // Validação de endereço
     if (!addressData) {
-      setErrorMessage('Por favor, preencha e valide o formulário de endereço acima.');
+      const formEl = document.getElementById('address-form') as HTMLFormElement | null;
+      if (formEl) {
+        formEl.requestSubmit();
+      }
+      setErrorMessage('Por favor, verifique os campos obrigatórios do endereço (marcados com *) acima.');
       return;
     }
 
@@ -77,72 +79,48 @@ export default function CheckoutPage() {
       return;
     }
 
-    // Validação de fiado
-    if (formaPagamento === 'fiado') {
-      if (!fiadoInfo) {
-        setErrorMessage('Por favor, consulte seu WhatsApp cadastrado para compras no Fiado.');
-        return;
-      }
-
-      if (!fiadoInfo.aprovado) {
-        setErrorMessage(fiadoInfo.motivo_recusa || 'Limite de Fiado excedido.');
-        return;
-      }
-    }
-
     setIsSubmitting(true);
 
     try {
-      // Geração da chave de idempotência UUID v4
       const chaveIdempotencia = crypto.randomUUID();
 
-      // Definir status inicial
-      const initialStatus: StatusPedido =
-        formaPagamento === 'pix' ? 'aguardando_pagamento' : 'pendente_aprovacao';
+      const payload = {
+        cliente_nome: addressData.cliente_nome,
+        cliente_whatsapp: addressData.cliente_whatsapp,
+        endereco_rua: addressData.endereco_rua,
+        endereco_numero: addressData.endereco_numero,
+        endereco_bairro: addressData.bairro,
+        endereco_complemento: addressData.endereco_complemento || null,
+        ponto_referencia: addressData.ponto_referencia || null,
+        forma_pagamento: formaPagamento,
+        troco_para: formaPagamento === 'dinheiro' ? trocoPara || null : null,
+        taxa_entrega: taxaEntrega,
+        valor_produtos: subtotal,
+        valor_total: total,
+        chave_idempotencia: chaveIdempotencia,
+        itens: itens.map((item) => ({
+          produto_id: item.produto.id,
+          quantidade: item.quantidade,
+          preco_unitario: item.precoUnitario,
+          subtotal: item.subtotal,
+        })),
+      };
 
-      // 1. Gravar pedido na tabela 'pedidos'
-      const { data: pedido, error: pedidoError } = await supabase
-        .from('pedidos')
-        .insert({
-          cliente_id: fiadoInfo?.id || null,
-          cliente_nome: addressData.cliente_nome,
-          cliente_whatsapp: addressData.cliente_whatsapp,
-          endereco_rua: addressData.endereco_rua,
-          endereco_numero: addressData.endereco_numero,
-          endereco_bairro: addressData.bairro,
-          endereco_complemento: addressData.endereco_complemento || null,
-          ponto_referencia: addressData.ponto_referencia || null,
-          forma_pagamento: formaPagamento,
-          troco_para: formaPagamento === 'dinheiro' ? trocoPara || null : null,
-          taxa_entrega: taxaEntrega,
-          valor_produtos: subtotal,
-          valor_total: total,
-          status: initialStatus,
-          chave_idempotencia: chaveIdempotencia,
-        })
-        .select()
-        .single();
+      const response = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
 
-      if (pedidoError) throw pedidoError;
+      const resJson = await response.json();
 
-      // 2. Gravar itens do pedido na tabela 'itens_pedido'
-      const itensPayload = itens.map((item) => ({
-        pedido_id: pedido.id,
-        produto_id: item.produto.id,
-        quantidade: item.quantidade,
-        preco_unitario: item.precoUnitario,
-        subtotal: item.subtotal,
-      }));
+      if (!response.ok || resJson.error) {
+        throw new Error(resJson.error || 'Erro ao processar pedido.');
+      }
 
-      const { error: itensError } = await supabase
-        .from('itens_pedido')
-        .insert(itensPayload);
-
-      if (itensError) throw itensError;
-
-      // 3. Limpar a store Zustand e redirecionar
+      // Limpar a store Zustand e redirecionar
       clearCart();
-      router.push(`/pedido/${pedido.id}`);
+      router.push(`/pedido/${resJson.data.id}`);
     } catch (err: unknown) {
       console.error('Erro ao processar pedido:', err);
       const errMessage = err instanceof Error ? err.message : 'Ocorreu um erro ao enviar seu pedido. Tente novamente.';
@@ -189,7 +167,6 @@ export default function CheckoutPage() {
               valorTotal={total}
               trocoPara={trocoPara}
               onTrocoChange={(valor) => setTrocoPara(valor)}
-              onFiadoVerified={(info) => setFiadoInfo(info)}
             />
           </div>
 

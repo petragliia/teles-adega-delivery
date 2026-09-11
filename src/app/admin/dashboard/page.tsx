@@ -6,7 +6,8 @@ import { KanbanBoard } from '@/components/admin/kanban/KanbanBoard';
 import { useRealtimeOrders } from '@/hooks/useRealtimeOrders';
 import { useAudioAlert } from '@/hooks/useAudioAlert';
 import { supabase } from '@/services/supabaseClient';
-import { Pedido, PedidoItem } from '@/types/storefront';
+import { Pedido } from '@/types/storefront';
+import { formatPedido } from '@/lib/orderUtils';
 
 export default function AdminDashboardPage() {
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
@@ -20,7 +21,10 @@ export default function AdminDashboardPage() {
         .from('pedidos')
         .select(`
           *,
+          cliente:clientes(*),
           itens:itens_pedido(
+            id,
+            pedido_id,
             quantidade,
             preco_unitario,
             subtotal,
@@ -31,17 +35,7 @@ export default function AdminDashboardPage() {
 
       if (error) throw error;
 
-      const formatted: Pedido[] = ((data as Record<string, unknown>[]) || []).map((p) => ({
-        ...(p as unknown as Pedido),
-        itens: ((p.itens as Record<string, unknown>[]) || []).map((item) => ({
-          produto_id: String(item.produto_id || ''),
-          quantidade: Number(item.quantidade || 0),
-          preco_unitario: Number(item.preco_unitario || 0),
-          subtotal: Number(item.subtotal || 0),
-          produto_nome: (item.produto as { nome?: string })?.nome || 'Produto',
-        })),
-      }));
-
+      const formatted: Pedido[] = ((data as Record<string, unknown>[]) || []).map(formatPedido);
       setPedidos(formatted);
     } catch (err: unknown) {
       console.error('Erro ao carregar pedidos:', err);
@@ -62,42 +56,66 @@ export default function AdminDashboardPage() {
         playNewOrderSound();
       }
 
-      // 2. Adicionar o pedido à lista imediatamente
-      setPedidos((prev) => {
-        if (prev.some((p) => p.id === newOrder.id)) return prev;
-        return [{ ...newOrder, itens: [] }, ...prev];
-      });
-
-      // 3. Buscar os itens do pedido recém-criado no Supabase para exibir os nomes dos produtos
+      // 2. Buscar o pedido completo com cliente e itens cadastrados no Supabase
       try {
-        const { data: itensData } = await supabase
-          .from('itens_pedido')
-          .select('quantidade, subtotal, produto_id, preco_unitario, produto:produtos(nome)')
-          .eq('pedido_id', newOrder.id);
+        const { data: fullOrderData, error: fullOrderErr } = await supabase
+          .from('pedidos')
+          .select(`
+            *,
+            cliente:clientes(*),
+            itens:itens_pedido(
+              id,
+              pedido_id,
+              quantidade,
+              preco_unitario,
+              subtotal,
+              produto:produtos(nome)
+            )
+          `)
+          .eq('id', newOrder.id)
+          .single();
 
-        if (itensData && itensData.length > 0) {
-          const formattedItens: PedidoItem[] = (itensData as Record<string, unknown>[]).map((item) => ({
-            produto_id: String(item.produto_id || ''),
-            preco_unitario: Number(item.preco_unitario || 0),
-            quantidade: Number(item.quantidade || 0),
-            subtotal: Number(item.subtotal || 0),
-            produto_nome: (item.produto as { nome?: string })?.nome || 'Produto',
-          }));
-
-          setPedidos((prev) =>
-            prev.map((p) => (p.id === newOrder.id ? { ...p, itens: formattedItens } : p))
-          );
+        if (!fullOrderErr && fullOrderData) {
+          const formatted = formatPedido(fullOrderData as Record<string, unknown>);
+          setPedidos((prev) => {
+            if (prev.some((p) => p.id === newOrder.id)) {
+              return prev.map((p) => (p.id === newOrder.id ? formatted : p));
+            }
+            return [formatted, ...prev];
+          });
+          return;
         }
       } catch (err: unknown) {
-        console.error('Erro ao carregar itens do novo pedido:', err);
+        console.error('Erro ao carregar detalhes do novo pedido:', err);
       }
+
+      // Fallback seguro
+      const fallbackFormatted = formatPedido(newOrder as unknown as Record<string, unknown>);
+      setPedidos((prev) => {
+        if (prev.some((p) => p.id === newOrder.id)) return prev;
+        return [fallbackFormatted, ...prev];
+      });
     },
     [playNewOrderSound]
   );
 
   const handleUpdateOrder = useCallback((updatedOrder: Pedido) => {
     setPedidos((prev) =>
-      prev.map((p) => (p.id === updatedOrder.id ? { ...p, ...updatedOrder } : p))
+      prev.map((p) => {
+        if (p.id === updatedOrder.id) {
+          return {
+            ...p,
+            ...updatedOrder,
+            cliente_nome: p.cliente_nome || updatedOrder.cliente_nome,
+            cliente_whatsapp: p.cliente_whatsapp || updatedOrder.cliente_whatsapp,
+            endereco_rua: p.endereco_rua || updatedOrder.endereco_rua,
+            endereco_numero: p.endereco_numero || updatedOrder.endereco_numero,
+            endereco_bairro: p.endereco_bairro || updatedOrder.endereco_bairro,
+            itens: p.itens && p.itens.length > 0 ? p.itens : updatedOrder.itens,
+          };
+        }
+        return p;
+      })
     );
   }, []);
 
@@ -106,12 +124,13 @@ export default function AdminDashboardPage() {
   // Ações rápidas no Kanban
   const handleAprovarPedido = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from('pedidos')
-        .update({ status: 'em_preparo', atualizado_em: new Date().toISOString() })
-        .eq('id', id);
-
-      if (error) throw error;
+      const res = await fetch('/api/admin/pedidos', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, status: 'em_preparo' }),
+      });
+      const resJson = await res.json();
+      if (!res.ok || resJson.error) throw new Error(resJson.error || 'Erro ao aprovar');
 
       setPedidos((prev) =>
         prev.map((p) => (p.id === id ? { ...p, status: 'em_preparo' } : p))
@@ -127,12 +146,13 @@ export default function AdminDashboardPage() {
     if (!motivo) return;
 
     try {
-      const { error } = await supabase
-        .from('pedidos')
-        .update({ status: 'cancelado', atualizado_em: new Date().toISOString() })
-        .eq('id', id);
-
-      if (error) throw error;
+      const res = await fetch('/api/admin/pedidos', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, status: 'cancelado', observacao: motivo }),
+      });
+      const resJson = await res.json();
+      if (!res.ok || resJson.error) throw new Error(resJson.error || 'Erro ao recusar');
 
       setPedidos((prev) =>
         prev.map((p) => (p.id === id ? { ...p, status: 'cancelado' } : p))
@@ -145,12 +165,13 @@ export default function AdminDashboardPage() {
 
   const handleAtribuirMotoboy = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from('pedidos')
-        .update({ status: 'em_rota', atualizado_em: new Date().toISOString() })
-        .eq('id', id);
-
-      if (error) throw error;
+      const res = await fetch('/api/admin/pedidos', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, status: 'em_rota' }),
+      });
+      const resJson = await res.json();
+      if (!res.ok || resJson.error) throw new Error(resJson.error || 'Erro ao despachar');
 
       setPedidos((prev) =>
         prev.map((p) => (p.id === id ? { ...p, status: 'em_rota' } : p))
@@ -163,12 +184,13 @@ export default function AdminDashboardPage() {
 
   const handleValidarCodigo = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from('pedidos')
-        .update({ status: 'entregue', atualizado_em: new Date().toISOString() })
-        .eq('id', id);
-
-      if (error) throw error;
+      const res = await fetch('/api/admin/pedidos', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, status: 'entregue' }),
+      });
+      const resJson = await res.json();
+      if (!res.ok || resJson.error) throw new Error(resJson.error || 'Erro ao finalizar');
 
       setPedidos((prev) =>
         prev.map((p) => (p.id === id ? { ...p, status: 'entregue' } : p))

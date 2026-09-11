@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Header } from '@/components/layout/Header';
 import { HeroSection } from '@/components/storefront/HeroSection';
 import { CategoryTabs, CATEGORIAS_PADRAO } from '@/components/storefront/CategoryTabs';
@@ -17,71 +17,114 @@ export default function HomePage() {
   const [categorias, setCategorias] = useState<Categoria[]>(CATEGORIAS_PADRAO);
   const [produtos, setProdutos] = useState<Produto[] | undefined>(undefined);
 
-  useEffect(() => {
-    async function loadData() {
-      try {
-        // Fetch active categories
-        const { data: catData } = await supabase
-          .from('categorias')
-          .select('*')
-          .eq('ativo', true)
-          .order('ordem', { ascending: true });
+  const loadData = useCallback(async () => {
+    try {
+      // Buscar categorias ativas
+      const { data: catData } = await supabase
+        .from('categorias')
+        .select('*')
+        .eq('ativo', true)
+        .order('nome', { ascending: true });
 
-        if (catData && catData.length > 0) {
-          const mappedCat: Categoria[] = [
-            { id: 'todas', nome: 'Todas', slug: 'todas', ativo: true },
-            ...(catData as Categoria[]).map((c) => ({
-              id: c.id,
-              nome: c.nome,
-              slug: c.slug || c.id,
-              ativo: c.ativo,
-            })),
-          ];
-          setCategorias(mappedCat);
-        }
+      if (catData && catData.length > 0) {
+        const mappedCat: Categoria[] = [
+          { id: 'todas', nome: 'Todas', slug: 'todas', ativo: true },
+          ...(catData as Categoria[]).map((c) => ({
+            id: c.id,
+            nome: c.nome,
+            slug: c.slug || c.id,
+            ativo: c.ativo,
+          })),
+        ];
+        setCategorias(mappedCat);
+      }
 
-        // Fetch active products from view or fallback
-        const { data: viewData, error: viewError } = await supabase
-          .from('vw_produtos_vitrine')
-          .select('*')
-          .eq('ativo', true);
+      // Buscar produtos ativos da view com preços vigentes ou da tabela base
+      const { data: viewData, error: viewError } = await supabase
+        .from('vw_produtos_vitrine')
+        .select('*')
+        .eq('ativo', true);
 
-        if (!viewError && viewData && viewData.length > 0) {
-          const mapped: Produto[] = (viewData as Record<string, unknown>[]).map((item) => ({
-            ...(item as unknown as Produto),
-            preco: Number(item.preco_vigente ?? item.preco_original ?? item.preco ?? 0),
-            preco_original: Number(item.preco_original ?? item.preco ?? 0),
-            preco_vigente: Number(item.preco_vigente ?? item.preco ?? 0),
-            em_promocao: Boolean(item.em_promocao),
-            percentual_desconto: Number(item.percentual_desconto || 0),
-          }));
-          setProdutos(mapped);
-        } else {
-          const { data: prodData } = await supabase
+      if (!viewError && viewData && viewData.length > 0) {
+        const mapped: Produto[] = (viewData as Record<string, unknown>[]).map((item) => ({
+          ...(item as unknown as Produto),
+          preco: Number(item.preco_vigente ?? item.preco_original ?? item.preco ?? 0),
+          preco_original: Number(item.preco_original ?? item.preco ?? 0),
+          preco_vigente: Number(item.preco_vigente ?? item.preco ?? 0),
+          em_promocao: Boolean(item.em_promocao),
+          percentual_desconto: Number(item.percentual_desconto || 0),
+        }));
+        // Priorizar produtos em destaque no topo da vitrine
+        mapped.sort((a, b) => (b.destaque ? 1 : 0) - (a.destaque ? 1 : 0));
+        setProdutos(mapped);
+      } else {
+        // Fallback para tabela direta produtos
+        let prodData: Record<string, unknown>[] | null = null;
+        try {
+          const res = await supabase
             .from('produtos')
             .select('*')
             .eq('ativo', true)
             .order('destaque', { ascending: false });
 
-          if (prodData && prodData.length > 0) {
-            setProdutos(
-              (prodData as Record<string, unknown>[]).map((p) => ({
-                ...(p as unknown as Produto),
-                preco_original: Number(p.preco || 0),
-                preco_vigente: Number(p.preco || 0),
-                em_promocao: false,
-                percentual_desconto: 0,
-              }))
-            );
+          if (!res.error && res.data) {
+            prodData = res.data as Record<string, unknown>[];
           }
+        } catch {
+          // Caso a coluna destaque ainda não exista no schema
         }
-      } catch (err: unknown) {
-        console.error('Erro ao carregar dados da vitrine no Supabase:', err);
-      }
-    }
 
-    loadData();
+        if (!prodData) {
+          const resFallback = await supabase
+            .from('produtos')
+            .select('*')
+            .eq('ativo', true);
+          prodData = (resFallback.data as Record<string, unknown>[]) || [];
+        }
+
+        if (prodData && prodData.length > 0) {
+          const mappedFallback: Produto[] = prodData.map((p) => ({
+            ...(p as unknown as Produto),
+            preco_original: Number(p.preco || 0),
+            preco_vigente: Number(p.preco || 0),
+            em_promocao: false,
+            percentual_desconto: 0,
+          }));
+          mappedFallback.sort((a, b) => (b.destaque ? 1 : 0) - (a.destaque ? 1 : 0));
+          setProdutos(mappedFallback);
+        }
+      }
+    } catch (err: unknown) {
+      console.error('Erro ao carregar dados da vitrine no Supabase:', err);
+    }
   }, []);
+
+  useEffect(() => {
+    loadData();
+
+    // Inscrição Realtime no Supabase: vitrine atualiza instantaneamente sem refresh
+    const channel = supabase
+      .channel('storefront-vitrine-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'produtos' },
+        () => {
+          loadData();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'promocoes' },
+        () => {
+          loadData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [loadData]);
 
   return (
     <div className="min-h-screen bg-[#0D0D0D] text-white flex flex-col font-sans selection:bg-[#F59E0B] selection:text-[#0D0D0D]">

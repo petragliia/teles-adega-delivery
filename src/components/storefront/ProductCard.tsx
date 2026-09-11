@@ -69,11 +69,21 @@ export const ProductCard: React.FC<ProductCardProps> = ({ produto }) => {
         </div>
       )}
 
+      {/* Badge de Destaque (quando não estiver em promoção) */}
+      {!emPromocao && produto.destaque && (
+        <div className="absolute top-2.5 left-2.5 z-10 flex items-center gap-1">
+          <span className="flex items-center gap-1 bg-[#F59E0B] text-black text-[11px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full shadow-lg shadow-amber-500/20">
+            <Sparkles className="w-3 h-3 fill-black" />
+            DESTAQUE
+          </span>
+        </div>
+      )}
+
       {/* Badge de Alerta de Estoque Baixo */}
       {isEstoqueBaixo && (
         <div
           className={`absolute z-10 flex items-center gap-1 rounded-md bg-amber-500/20 px-2 py-1 text-[11px] font-bold text-amber-400 border border-amber-500/30 backdrop-blur-md ${
-            emPromocao ? 'top-9 left-2.5' : 'top-3 left-3'
+            emPromocao || produto.destaque ? 'top-9 left-2.5' : 'top-3 left-3'
           }`}
         >
           <AlertTriangle className="h-3 w-3" />

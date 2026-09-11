@@ -91,6 +91,22 @@ export default function AdminProdutosPage() {
 
   useEffect(() => {
     fetchData();
+
+    // Supabase Realtime: Sincroniza adições, alterações de estoque e status em tempo real
+    const channel = supabase
+      .channel('admin-produtos-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'produtos' },
+        () => {
+          fetchData(true);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [fetchData]);
 
   // Cálculos de Métricas Rápidas
@@ -179,15 +195,17 @@ export default function AdminProdutosPage() {
     );
 
     try {
-      const { error } = await supabase
-        .from('produtos')
-        .update({
-          estoque_atual: novoEstoque,
-          atualizado_em: new Date().toISOString(),
-        })
-        .eq('id', id);
+      const response = await fetch('/api/admin/produtos', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, estoque_atual: novoEstoque }),
+      });
 
-      if (error) throw error;
+      const resJson = await response.json();
+      if (!response.ok || resJson.error) {
+        throw new Error(resJson.error || 'Falha ao salvar estoque no banco.');
+      }
+
       addToast('success', 'Estoque Atualizado', `${targetProd.nome}: agora com ${novoEstoque} un.`);
     } catch (err: unknown) {
       console.error('Erro ao ajustar estoque:', err);
@@ -211,15 +229,16 @@ export default function AdminProdutosPage() {
     );
 
     try {
-      const { error } = await supabase
-        .from('produtos')
-        .update({
-          ativo: novoStatus,
-          atualizado_em: new Date().toISOString(),
-        })
-        .eq('id', p.id);
+      const response = await fetch('/api/admin/produtos', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: p.id, ativo: novoStatus }),
+      });
 
-      if (error) throw error;
+      const resJson = await response.json();
+      if (!response.ok || resJson.error) {
+        throw new Error(resJson.error || 'Falha ao alterar status.');
+      }
 
       addToast(
         novoStatus ? 'success' : 'warning',
@@ -237,18 +256,56 @@ export default function AdminProdutosPage() {
     }
   };
 
+  // Alternar Destaque Instantâneo
+  const handleToggleDestaque = async (p: Produto, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+
+    const novoDestaque = !p.destaque;
+
+    // Otimista
+    setProdutos((prev) =>
+      prev.map((prod) => (prod.id === p.id ? { ...prod, destaque: novoDestaque } : prod))
+    );
+
+    try {
+      const response = await fetch('/api/admin/produtos', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: p.id, destaque: novoDestaque }),
+      });
+
+      const resJson = await response.json();
+      if (!response.ok || resJson.error) {
+        throw new Error(resJson.error || 'Falha ao alterar destaque.');
+      }
+
+      addToast(
+        novoDestaque ? 'success' : 'warning',
+        novoDestaque ? 'Produto em Destaque' : 'Destaque Removido',
+        `${p.nome} ${novoDestaque ? 'agora é destaque no topo da vitrine' : 'não está mais em destaque'}.`
+      );
+    } catch (err: unknown) {
+      console.error('Erro ao alterar destaque:', err);
+      // Reverter
+      setProdutos((prev) =>
+        prev.map((prod) => (prod.id === p.id ? { ...prod, destaque: p.destaque } : prod))
+      );
+      const errMessage = err instanceof Error ? err.message : 'Falha ao alterar destaque.';
+      addToast('error', 'Erro ao alterar destaque', errMessage);
+    }
+  };
+
   // Exclusão Permanente
   const handleConfirmDelete = async (id: string) => {
     try {
       setIsDeleting(true);
-      const { error } = await supabase.from('produtos').delete().eq('id', id);
+      const response = await fetch(`/api/admin/produtos?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+      });
 
-      if (error) {
-        // Se houver chave estrangeira em pedidos_itens, orientar inativação
-        if (error.code === '23503') {
-          throw new Error('Este produto possui histórico de vendas e não pode ser excluído permanentemente. Utilize a opção de "Ocultar da Vitrine".');
-        }
-        throw error;
+      const resJson = await response.json();
+      if (!response.ok || resJson.error) {
+        throw new Error(resJson.error || 'Erro ao excluir produto.');
       }
 
       setProdutos((prev) => prev.filter((p) => p.id !== id));
@@ -258,7 +315,7 @@ export default function AdminProdutosPage() {
     } catch (err: unknown) {
       console.error('Erro ao deletar produto:', err);
       const errMessage = err instanceof Error ? err.message : 'Erro ao tentar deletar o produto.';
-      addToast('error', 'Falha na Exclusão', errMessage);
+      addToast('error', 'Erro na Exclusão', errMessage);
     } finally {
       setIsDeleting(false);
     }
@@ -268,12 +325,16 @@ export default function AdminProdutosPage() {
   const handleConfirmInactivate = async (id: string) => {
     try {
       setIsDeleting(true);
-      const { error } = await supabase
-        .from('produtos')
-        .update({ ativo: false, atualizado_em: new Date().toISOString() })
-        .eq('id', id);
+      const response = await fetch('/api/admin/produtos', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, ativo: false }),
+      });
 
-      if (error) throw error;
+      const resJson = await response.json();
+      if (!response.ok || resJson.error) {
+        throw new Error(resJson.error || 'Falha ao desativar produto.');
+      }
 
       setProdutos((prev) =>
         prev.map((p) => (p.id === id ? { ...p, ativo: false } : p))
@@ -570,12 +631,19 @@ export default function AdminProdutosPage() {
                         <Package className="w-8 h-8 text-zinc-600" />
                       )}
 
-                      {/* Pill de Destaque */}
-                      {p.destaque && (
-                        <div className="absolute top-1 left-1 bg-[#F59E0B] text-black p-1 rounded-md shadow">
-                          <Sparkles className="w-3 h-3" />
-                        </div>
-                      )}
+                      {/* Botão de Destaque Interativo */}
+                      <button
+                        type="button"
+                        onClick={(e) => handleToggleDestaque(p, e)}
+                        className={`absolute top-1 left-1 p-1.5 rounded-lg transition shadow-md cursor-pointer ${
+                          p.destaque
+                            ? 'bg-[#F59E0B] text-black shadow-amber-500/30'
+                            : 'bg-black/60 text-zinc-500 hover:text-amber-400 border border-white/10'
+                        }`}
+                        title={p.destaque ? 'Produto em Destaque (clique para remover)' : 'Marcar como Destaque'}
+                      >
+                        <Sparkles className="w-3.5 h-3.5" />
+                      </button>
                     </div>
 
                     {/* Informações Principais */}
@@ -724,11 +792,19 @@ export default function AdminProdutosPage() {
                               ) : (
                                 <Package className="w-6 h-6 text-zinc-600" />
                               )}
-                              {p.destaque && (
-                                <div className="absolute top-0.5 left-0.5 bg-[#F59E0B] text-black p-0.5 rounded shadow">
-                                  <Sparkles className="w-2.5 h-2.5" />
-                                </div>
-                              )}
+                              {/* Botão de Destaque Interativo */}
+                              <button
+                                type="button"
+                                onClick={(e) => handleToggleDestaque(p, e)}
+                                className={`absolute top-0.5 left-0.5 p-1 rounded transition shadow cursor-pointer ${
+                                  p.destaque
+                                    ? 'bg-[#F59E0B] text-black shadow-amber-500/30'
+                                    : 'bg-black/70 text-zinc-500 hover:text-amber-400 border border-white/10 opacity-40 hover:opacity-100 group-hover:opacity-100'
+                                }`}
+                                title={p.destaque ? 'Produto em Destaque (clique para remover)' : 'Marcar como Destaque'}
+                              >
+                                <Sparkles className="w-2.5 h-2.5" />
+                              </button>
                             </div>
 
                             <div className="min-w-0 max-w-xs">

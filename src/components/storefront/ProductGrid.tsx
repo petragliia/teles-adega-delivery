@@ -137,9 +137,15 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
   initialProdutos,
 }) => {
   const [produtos, setProdutos] = useState<Produto[]>(initialProdutos || []);
-  const [loading, setLoading] = useState<boolean>(!initialProdutos);
+  const [loading, setLoading] = useState<boolean>(initialProdutos === undefined);
 
   useEffect(() => {
+    if (initialProdutos !== undefined) {
+      setProdutos(initialProdutos);
+      setLoading(false);
+      return;
+    }
+
     async function fetchProdutos() {
       setLoading(true);
       try {
@@ -175,6 +181,7 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
           setProdutos(
             (data as Record<string, unknown>[]).map((p) => ({
               ...(p as unknown as Produto),
+              preco: Number(p.preco || 0),
               preco_original: Number(p.preco || 0),
               preco_vigente: Number(p.preco || 0),
               em_promocao: false,
@@ -190,16 +197,16 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
       }
     }
 
-    if (!initialProdutos) {
-      fetchProdutos();
-    }
+    fetchProdutos();
   }, [initialProdutos]);
 
-  // Filtragem dinâmica por Categoria
-  const produtosFiltrados = produtos.filter((prod) => {
-    if (selectedCategorySlug === 'todas') return true;
-    return prod.categoria_id === selectedCategorySlug;
-  });
+  // Filtragem dinâmica por Categoria com priorização de Destaque
+  const produtosFiltrados = produtos
+    .filter((prod) => {
+      if (selectedCategorySlug === 'todas') return true;
+      return prod.categoria_id === selectedCategorySlug;
+    })
+    .sort((a, b) => (b.destaque ? 1 : 0) - (a.destaque ? 1 : 0));
 
   return (
     <section className="w-full bg-[#0D0D0D] py-8 sm:py-12 min-h-[400px]">

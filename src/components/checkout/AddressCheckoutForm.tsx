@@ -64,6 +64,25 @@ export function AddressCheckoutForm({ onAddressSubmit, initialValues }: AddressC
 
   const cepValue = watch('cep');
 
+  // Sincronização em tempo real: assim que o endereço estiver válido, atualiza o checkout pai
+  React.useEffect(() => {
+    const subscription = watch((values) => {
+      const parsed = addressSchema.safeParse(values);
+      if (parsed.success) {
+        onAddressSubmit(parsed.data);
+      }
+    });
+
+    // Checagem imediata inicial
+    const currentValues = watch();
+    const parsedInitial = addressSchema.safeParse(currentValues);
+    if (parsedInitial.success) {
+      onAddressSubmit(parsedInitial.data);
+    }
+
+    return () => subscription.unsubscribe();
+  }, [watch, onAddressSubmit]);
+
   const formatCepDisplay = (value: string) => {
     const cleaned = value.replace(/\D/g, '').slice(0, 8);
     if (cleaned.length > 5) {

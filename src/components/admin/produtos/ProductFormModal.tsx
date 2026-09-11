@@ -192,9 +192,14 @@ export function ProductFormModal({
     }
   };
 
-  const parsePreco = (val: string): number => {
-    const sanitized = val.replace(/\./g, '').replace(',', '.').replace(/[^0-9.]/g, '');
-    const num = parseFloat(sanitized);
+  const parsePreco = (val: string | number): number => {
+    if (typeof val === 'number') return isNaN(val) ? 0 : val;
+    if (!val) return 0;
+    let cleaned = String(val).trim().replace(/^R\$\s*/i, '');
+    if (cleaned.includes(',')) {
+      cleaned = cleaned.replace(/\./g, '').replace(',', '.');
+    }
+    const num = parseFloat(cleaned.replace(/[^0-9.]/g, ''));
     return isNaN(num) ? 0 : num;
   };
 
@@ -235,6 +240,7 @@ export function ProductFormModal({
       setSaving(true);
 
       const dbPayload = {
+        ...(isEditing && produtoParaEditar ? { id: produtoParaEditar.id } : {}),
         nome: payloadRaw.nome,
         categoria_id: payloadRaw.categoria_id,
         descricao: payloadRaw.descricao || null,
@@ -243,33 +249,25 @@ export function ProductFormModal({
         estoque_atual: payloadRaw.estoque_atual,
         estoque_minimo: payloadRaw.estoque_minimo,
         ativo: payloadRaw.ativo,
-        atualizado_em: new Date().toISOString(),
+        destaque: payloadRaw.destaque,
       };
 
-      if (isEditing && produtoParaEditar) {
-        const { data, error } = await supabase
-          .from('produtos')
-          .update(dbPayload)
-          .eq('id', produtoParaEditar.id)
-          .select(`*, categoria:categorias(nome)`)
-          .single();
+      const response = await fetch('/api/admin/produtos', {
+        method: isEditing ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dbPayload),
+      });
 
-        if (error) throw error;
-        onSuccess((data as Produto) || { ...produtoParaEditar, ...dbPayload }, true);
-      } else {
-        const { data, error } = await supabase
-          .from('produtos')
-          .insert([dbPayload])
-          .select(`*, categoria:categorias(nome)`)
-          .single();
+      const resJson = await response.json();
 
-        if (error) throw error;
-        onSuccess((data as Produto) || ({ id: 'temp-' + Date.now(), ...dbPayload } as unknown as Produto), false);
+      if (!response.ok || resJson.error) {
+        throw new Error(resJson.error || 'Falha ao salvar produto no banco de dados.');
       }
 
+      onSuccess(resJson.data, isEditing);
       onClose();
     } catch (err: unknown) {
-      console.error('Erro ao salvar produto no Supabase:', err);
+      console.error('Erro ao salvar produto:', err);
       const errMessage = err instanceof Error ? err.message : 'Ocorreu um erro ao salvar o produto no banco de dados.';
       setFormErrors((prev) => ({
         ...prev,

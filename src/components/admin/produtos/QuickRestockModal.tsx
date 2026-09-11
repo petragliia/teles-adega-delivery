@@ -134,15 +134,16 @@ export function QuickRestockModal({
     }));
 
     try {
-      const { error } = await supabase
-        .from('produtos')
-        .update({
-          estoque_atual: item.newStock,
-          atualizado_em: new Date().toISOString(),
-        })
-        .eq('id', productId);
+      const response = await fetch('/api/admin/produtos', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: productId, estoque_atual: item.newStock }),
+      });
 
-      if (error) throw error;
+      const resJson = await response.json();
+      if (!response.ok || resJson.error) {
+        throw new Error(resJson.error || 'Falha ao salvar estoque.');
+      }
 
       setAdjustments((prev) => ({
         ...prev,
@@ -185,15 +186,16 @@ export function QuickRestockModal({
     startTransition(async () => {
       try {
         for (const item of itemsToSave) {
-          const { error } = await supabase
-            .from('produtos')
-            .update({
-              estoque_atual: item.newStock,
-              atualizado_em: new Date().toISOString(),
-            })
-            .eq('id', item.produto.id);
+          const response = await fetch('/api/admin/produtos', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: item.produto.id, estoque_atual: item.newStock }),
+          });
 
-          if (error) throw error;
+          const resJson = await response.json();
+          if (!response.ok || resJson.error) {
+            throw new Error(resJson.error || 'Falha ao salvar lote.');
+          }
         }
 
         setGlobalMessage({

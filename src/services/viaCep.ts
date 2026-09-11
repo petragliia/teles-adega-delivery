@@ -47,17 +47,54 @@ export async function buscarCep(cep: string): Promise<BuscarCepResult> {
     let taxaEntrega = 0;
     let bairroEncontrado = false;
 
-    if (bairro) {
+    if (bairro || cleanedCep) {
       const { data: zonas, error } = await supabase
         .from('zonas_frete')
-        .select('valor_frete, bairro')
-        .ilike('bairro', `%${bairro}%`)
-        .eq('ativo', true)
-        .limit(1);
+        .select('*')
+        .eq('ativo', true);
 
       if (!error && zonas && zonas.length > 0) {
-        taxaEntrega = Number(zonas[0].valor_frete);
-        bairroEncontrado = true;
+        const normalize = (str: string) =>
+          str
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .trim();
+
+        const cepNum = parseInt(cleanedCep, 10);
+        const normBairro = normalize(bairro);
+        const normCidade = normalize(cidade);
+
+        // 1. Busca por faixa de CEP
+        let matchedZone = zonas.find((z) => {
+          if (z.cep_inicio && z.cep_fim) {
+            const inicioNum = parseInt(z.cep_inicio.replace(/\D/g, ''), 10);
+            const fimNum = parseInt(z.cep_fim.replace(/\D/g, ''), 10);
+            return cepNum >= inicioNum && cepNum <= fimNum;
+          }
+          return false;
+        });
+
+        // 2. Busca por nome do bairro se não casou por faixa
+        if (!matchedZone && normBairro) {
+          matchedZone = zonas.find((z) => {
+            const normZona = normalize(z.bairro);
+            return normZona.includes(normBairro) || normBairro.includes(normZona);
+          });
+        }
+
+        // 3. Busca por cidade
+        if (!matchedZone && normCidade) {
+          matchedZone = zonas.find((z) => {
+            const normZona = normalize(z.bairro);
+            return normZona.includes(normCidade);
+          });
+        }
+
+        if (matchedZone) {
+          taxaEntrega = Number(matchedZone.valor_frete);
+          bairroEncontrado = true;
+        }
       }
     }
 
