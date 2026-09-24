@@ -13,6 +13,7 @@ export interface Produto {
   categoria_nome?: string;
   nome: string;
   descricao?: string;
+  volume?: string;
   preco: number;
   preco_original?: number;
   preco_vigente?: number;

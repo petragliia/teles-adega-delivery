@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseServerAdmin';
+import { criarCobrancaPixAsaas } from '@/lib/payments/asaas';
 
 export const dynamic = 'force-dynamic';
 
@@ -118,7 +119,31 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: itensError.message }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, data: pedido });
+    // 4. Integração Asaas: gerar cobrança Pix vinculada ao pedido
+    let pixData = null;
+    if (forma_pagamento === 'pix') {
+      try {
+        pixData = await criarCobrancaPixAsaas({
+          pedidoId: pedido.id,
+          valorTotal: Number(valor_total),
+          cliente: {
+            nome: cliente_nome,
+            telefone: cleanPhone,
+            externalReference: clienteId || undefined,
+          },
+        });
+      } catch (pixErr: unknown) {
+        console.error('[Checkout Route] Erro ao criar cobrança Pix no Asaas:', pixErr);
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        ...pedido,
+        pix: pixData,
+      },
+    });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro interno ao processar checkout';
     return NextResponse.json({ error: message }, { status: 500 });

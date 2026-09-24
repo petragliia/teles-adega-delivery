@@ -10,12 +10,12 @@ export interface CategoryTabsProps {
 }
 
 export const CATEGORIAS_PADRAO: Categoria[] = [
-  { id: 'todas', nome: 'Todas', slug: 'todas', ativo: true },
-  { id: 'cervejas', nome: 'Cervejas', slug: 'cervejas', ativo: true },
-  { id: 'destilados', nome: 'Destilados', slug: 'destilados', ativo: true },
-  { id: 'energeticos', nome: 'Energéticos', slug: 'energeticos', ativo: true },
-  { id: 'gelo-saborizado', nome: 'Gelo Saborizado', slug: 'gelo-saborizado', ativo: true },
-  { id: 'combos', nome: 'Combos Especiais', slug: 'combos', ativo: true },
+  { id: 'todas', nome: 'Cardápio Completo', slug: 'todas', ativo: true },
+  { id: 'destilados', nome: '👑 Destilados', slug: 'destilados', ativo: true },
+  { id: 'gelos-e-snacks', nome: '❄️ Gelos & Snacks', slug: 'gelos-e-snacks', ativo: true },
+  { id: 'cervejas', nome: '🍺 Cervejas', slug: 'cervejas', ativo: true },
+  { id: 'drinks', nome: '🍸 Drinks & Coquetéis', slug: 'drinks', ativo: true },
+  { id: 'outras-bebidas', nome: '🥤 Outras Bebidas', slug: 'outras-bebidas', ativo: true },
 ];
 
 export const CategoryTabs: React.FC<CategoryTabsProps> = ({

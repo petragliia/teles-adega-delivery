@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { ArrowLeft, MessageCircle, MapPin, Loader2, ShoppingBag } from 'lucide-react';
 import { ConfirmationCodeCard } from '@/components/order/ConfirmationCodeCard';
 import { OrderStatusStepper } from '@/components/order/OrderStatusStepper';
+import { PixPaymentCard } from '@/components/order/PixPaymentCard';
 import { useOrderRealtime, OrderRealtimeData } from '@/hooks/useOrderRealtime';
 import { supabase } from '@/services/supabaseClient';
 import { PedidoItem } from '@/types/storefront';
@@ -104,6 +105,15 @@ export default function PedidoPage() {
 
         {/* Highlight 4-digit confirmation code */}
         <ConfirmationCodeCard codigoEntrega={pedido.codigo_entrega} />
+
+        {/* Pix Payment Card (Gateway Asaas) */}
+        {pedido.forma_pagamento === 'pix' && (
+          <PixPaymentCard
+            pedidoId={pedido.id}
+            valorTotal={Number(pedido.valor_total)}
+            status={pedido.status}
+          />
+        )}
 
         {/* Realtime Stepper */}
         <OrderStatusStepper status={pedido.status} formaPagamento={pedido.forma_pagamento} />
